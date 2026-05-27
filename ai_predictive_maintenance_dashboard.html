@@ -1,0 +1,242 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--cyan:#00e5ff;--green:#00e676;--red:#ff1744;--amber:#ffa000;--panel:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);--text:#e0e0e0;--muted:rgba(255,255,255,0.45)}
+  .dash{background:#0d1117;min-height:600px;padding:20px;font-family:'DM Sans',sans-serif;color:var(--text)}
+  .header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+  .logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),#0070f3);display:flex;align-items:center;justify-content:center}
+  .logo svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round}
+  .title{font-size:15px;font-weight:600;letter-spacing:.02em}
+  .subtitle{font-size:11px;color:var(--muted);font-family:'Space Mono',monospace}
+  .status-pill{margin-left:auto;display:flex;align-items:center;gap:6px;background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.2);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--green);font-weight:500}
+  .pulse{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.5s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .panel-label{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-family:'Space Mono',monospace}
+  .panel input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:14px;color:#fff;font-family:'DM Sans',sans-serif;transition:border-color .2s}
+  .panel input:focus{outline:none;border-color:rgba(0,229,255,.4)}
+  .panel input::placeholder{color:var(--muted)}
+  .unit{font-size:10px;color:var(--muted);margin-top:3px;font-family:'Space Mono',monospace}
+  .btn-row{display:flex;gap:10px;margin-bottom:16px}
+  .btn-primary{flex:1;padding:12px;background:var(--cyan);color:#0d1117;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.04em;transition:opacity .2s}
+  .btn-primary:hover{opacity:.85}
+  .btn-secondary{flex:1;padding:12px;background:transparent;color:var(--cyan);border:1px solid rgba(0,229,255,.3);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+  .btn-secondary:hover{background:rgba(0,229,255,.06)}
+  .result-box{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;min-height:90px;transition:all .4s}
+  .result-box.ok{border-color:rgba(0,230,118,.3);background:rgba(0,230,118,.04)}
+  .result-box.fault{border-color:rgba(255,23,68,.3);background:rgba(255,23,68,.04)}
+  .result-box.warn{border-color:rgba(255,160,0,.3);background:rgba(255,160,0,.04)}
+  .fault-label{font-size:16px;font-weight:600;margin-bottom:6px}
+  .fault-label.ok{color:var(--green)}
+  .fault-label.fault{color:var(--red)}
+  .rec{font-size:12px;color:var(--muted);line-height:1.6}
+  .gauge-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+  .gauge{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+  .gauge-val{font-size:18px;font-weight:600;font-family:'Space Mono',monospace}
+  .gauge-lbl{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.06em;text-transform:uppercase}
+  .gauge-bar{height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:8px;overflow:hidden}
+  .gauge-fill{height:100%;border-radius:2px;transition:width .5s ease,background .5s}
+  .waiting{color:var(--muted);font-size:13px;padding-top:4px}
+  .scenario-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  .badge{padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid;font-weight:500;transition:all .2s;font-family:'Space Mono',monospace}
+  .badge:hover{opacity:.8;transform:translateY(-1px)}
+  .b-ok{color:var(--green);border-color:rgba(0,230,118,.3);background:rgba(0,230,118,.06)}
+  .b-hot{color:#ff7043;border-color:rgba(255,112,67,.3);background:rgba(255,112,67,.06)}
+  .b-vib{color:var(--cyan);border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.06)}
+  .b-pre{color:#ab47bc;border-color:rgba(171,71,188,.3);background:rgba(171,71,188,.06)}
+  .b-oil{color:var(--amber);border-color:rgba(255,160,0,.3);background:rgba(255,160,0,.06)}
+  .b-leak{color:#ef5350;border-color:rgba(239,83,80,.3);background:rgba(239,83,80,.06)}
+  .history-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
+  .history-item:last-child{border-bottom:none}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .dot-ok{background:var(--green)}
+  .dot-fault{background:var(--red)}
+  .history-time{color:var(--muted);font-family:'Space Mono',monospace;font-size:10px;margin-left:auto}
+</style>
+
+<div class="dash">
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div>
+      <div class="title">AI Predictive Maintenance</div>
+      <div class="subtitle">INDUSTRIAL DIAGNOSTIC SYSTEM</div>
+    </div>
+    <div class="status-pill"><span class="pulse"></span> ONLINE</div>
+  </div>
+
+  <div style="margin-bottom:10px">
+    <div class="panel-label" style="margin-bottom:8px">Quick scenario loader</div>
+    <div class="scenario-badges">
+      <span class="badge b-ok" onclick="loadScenario(0)">⬤ Normal</span>
+      <span class="badge b-hot" onclick="loadScenario(1)">▲ Overheating</span>
+      <span class="badge b-vib" onclick="loadScenario(2)">≋ High Vibration</span>
+      <span class="badge b-pre" onclick="loadScenario(3)">↓ Pressure Fail</span>
+      <span class="badge b-oil" onclick="loadScenario(4)">◌ Low Oil</span>
+      <span class="badge b-leak" onclick="loadScenario(5)">〜 Coolant Leak</span>
+    </div>
+  </div>
+
+  <div class="gauge-row">
+    <div class="gauge">
+      <div class="gauge-val" id="g-temp" style="color:#ef5350">—</div>
+      <div class="gauge-lbl">Temp °C</div>
+      <div class="gauge-bar"><div class="gauge-fill" id="gf-temp" style="width:0%;background:#ef5350"></div></div>
+    </div>
+    <div class="gauge">
+      <div class="gauge-val" id="g-pres" style="color:#42a5f5">—</div>
+      <div class="gauge-lbl">Pressure psi</div>
+      <div class="gauge-bar"><div class="gauge-fill" id="gf-pres" style="width:0%;background:#42a5f5"></div></div>
+    </div>
+    <div class="gauge">
+      <div class="gauge-val" id="g-rpm" style="color:#ab47bc">—</div>
+      <div class="gauge-lbl">RPM</div>
+      <div class="gauge-bar"><div class="gauge-fill" id="gf-rpm" style="width:0%;background:#ab47bc"></div></div>
+    </div>
+    <div class="gauge">
+      <div class="gauge-val" id="g-oil" style="color:var(--amber)">—</div>
+      <div class="gauge-lbl">Oil Level %</div>
+      <div class="gauge-bar"><div class="gauge-fill" id="gf-oil" style="width:0%;background:var(--amber)"></div></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="panel-label">Temperature (°C)</div>
+      <input id="inp-temp" type="number" placeholder="e.g. 70" oninput="syncGauge('temp',this.value,120)"/>
+      <div class="unit">Normal: 60–80 °C</div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">Pressure (psi)</div>
+      <input id="inp-pres" type="number" placeholder="e.g. 100" oninput="syncGauge('pres',this.value,150)"/>
+      <div class="unit">Normal: 85–115 psi</div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">Vibration (g)</div>
+      <input id="inp-vib" type="number" placeholder="e.g. 0.02" step="0.01"/>
+      <div class="unit">Normal: &lt; 0.035 g</div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">Flow Rate (lpm)</div>
+      <input id="inp-flow" type="number" placeholder="e.g. 300"/>
+      <div class="unit">Normal: 250–350 lpm</div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="panel">
+      <div class="panel-label">Oil Level (%)</div>
+      <input id="inp-oil" type="number" placeholder="e.g. 60" oninput="syncGauge('oil',this.value,100)"/>
+      <div class="unit">Min: 30%</div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">RPM</div>
+      <input id="inp-rpm" type="number" placeholder="e.g. 1500" oninput="syncGauge('rpm',this.value,3000)"/>
+      <div class="unit">Normal: 1200–1800</div>
+    </div>
+    <div class="panel">
+      <div class="panel-label">Coolant Leak</div>
+      <input id="inp-leak" type="number" placeholder="0 or 1" min="0" max="1"/>
+      <div class="unit">0 = No, 1 = Yes</div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-primary" onclick="runDiagnosis()">▶ RUN AI DIAGNOSIS</button>
+    <button class="btn-secondary" onclick="clearAll()">✕ CLEAR</button>
+  </div>
+
+  <div class="result-box" id="result-box">
+    <div class="waiting">System waiting for analysis — enter sensor values and run diagnosis.</div>
+  </div>
+
+  <div id="history-wrap" style="display:none;margin-top:14px">
+    <div class="panel-label" style="margin-bottom:8px">Diagnosis history</div>
+    <div class="panel" id="history-list"></div>
+  </div>
+</div>
+
+<script>
+const scenarios = [
+  {temp:70,pres:100,vib:0.02,flow:300,oil:60,rpm:1500,leak:0},
+  {temp:95,pres:120,vib:0.02,flow:300,oil:60,rpm:1500,leak:0},
+  {temp:70,pres:100,vib:0.05,flow:300,oil:60,rpm:1500,leak:0},
+  {temp:70,pres:70,vib:0.02,flow:300,oil:60,rpm:1500,leak:0},
+  {temp:70,pres:100,vib:0.02,flow:300,oil:20,rpm:1500,leak:0},
+  {temp:70,pres:100,vib:0.02,flow:300,oil:60,rpm:1500,leak:1}
+];
+const faultInfo = [
+  {fault:"System Operating Normally",rec:"No maintenance required. All parameters within normal range.",cls:"ok"},
+  {fault:"Overheating Fault",rec:"Check cooling system, inspect pump bearings, reduce load.",cls:"fault"},
+  {fault:"High Vibration Fault",rec:"Inspect rotating parts, tighten loose components, check alignment.",cls:"fault"},
+  {fault:"Pressure Failure",rec:"Check hydraulic pressure lines and pump condition immediately.",cls:"fault"},
+  {fault:"Low Oil Level",rec:"Refill oil reservoir and inspect for leakage sources.",cls:"warn"},
+  {fault:"Coolant Leakage Fault",rec:"Inspect coolant pipes, seals, and repair leakage before restart.",cls:"fault"}
+];
+const history = [];
+
+function syncGauge(key,val,max){
+  const g=document.getElementById('g-'+key);
+  const gf=document.getElementById('gf-'+key);
+  const v=parseFloat(val)||0;
+  g.textContent=v||'—';
+  gf.style.width=Math.min(100,v/max*100)+'%';
+}
+
+function loadScenario(i){
+  const s=scenarios[i];
+  set('inp-temp',s.temp);set('inp-pres',s.pres);set('inp-vib',s.vib);
+  set('inp-flow',s.flow);set('inp-oil',s.oil);set('inp-rpm',s.rpm);set('inp-leak',s.leak);
+  syncGauge('temp',s.temp,120);syncGauge('pres',s.pres,150);
+  syncGauge('rpm',s.rpm,3000);syncGauge('oil',s.oil,100);
+}
+function set(id,val){document.getElementById(id).value=val}
+
+function classify(d){
+  if(d.leak===1) return 5;
+  if(d.oil<30) return 4;
+  if(d.pres<80) return 3;
+  if(d.vib>0.04) return 2;
+  if(d.temp>88) return 1;
+  return 0;
+}
+
+function runDiagnosis(){
+  const d={
+    temp:parseFloat(document.getElementById('inp-temp').value),
+    pres:parseFloat(document.getElementById('inp-pres').value),
+    vib:parseFloat(document.getElementById('inp-vib').value),
+    flow:parseFloat(document.getElementById('inp-flow').value),
+    oil:parseFloat(document.getElementById('inp-oil').value),
+    rpm:parseFloat(document.getElementById('inp-rpm').value),
+    leak:parseInt(document.getElementById('inp-leak').value)||0
+  };
+  const fields=['temp','pres','vib','flow','oil','rpm'];
+  for(const f of fields){if(isNaN(d[f])){alert('Please fill in all sensor fields.');return;}}
+  const idx=classify(d);
+  const fi=faultInfo[idx];
+  const box=document.getElementById('result-box');
+  box.className='result-box '+fi.cls;
+  const icon=fi.cls==='ok'?'✓ ':fi.cls==='warn'?'⚠ ':'✕ ';
+  box.innerHTML=`<div class="fault-label ${fi.cls}">${icon}${fi.fault}</div><div class="rec">${fi.rec}</div>`;
+  const now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  history.unshift({label:fi.fault,cls:fi.cls,time:now});
+  if(history.length>6) history.pop();
+  const wrap=document.getElementById('history-wrap');
+  const list=document.getElementById('history-list');
+  wrap.style.display='block';
+  list.innerHTML=history.map(h=>`<div class="history-item"><span class="dot dot-${h.cls==='ok'?'ok':'fault'}"></span><span>${h.label}</span><span class="history-time">${h.time}</span></div>`).join('');
+}
+
+function clearAll(){
+  ['inp-temp','inp-pres','inp-vib','inp-flow','inp-oil','inp-rpm','inp-leak'].forEach(id=>document.getElementById(id).value='');
+  ['temp','pres','rpm','oil'].forEach(k=>{document.getElementById('g-'+k).textContent='—';document.getElementById('gf-'+k).style.width='0%'});
+  const box=document.getElementById('result-box');
+  box.className='result-box';
+  box.innerHTML='<div class="waiting">System waiting for analysis — enter sensor values and run diagnosis.</div>';
+}
+</script>
