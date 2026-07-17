@@ -865,7 +865,7 @@ async function runDiagnostic(silent = false) {
         
         if (result.error) {
             console.error(result.error);
-            alert('Error running diagnostic.');
+            if (!silent) alert('Error running diagnostic.');
             return;
         }
 
@@ -891,11 +891,13 @@ async function runDiagnostic(silent = false) {
             console.error("Scheduler Error:", schedErr);
         }
         
-        // Enforce minimum 4-second diagnostic display
-        const elapsed = Date.now() - startTime;
-        const remaining = 4000 - elapsed;
-        if (remaining > 0) {
-            await new Promise(resolve => setTimeout(resolve, remaining));
+        // Enforce minimum 4-second diagnostic display (manual runs only)
+        if (!silent) {
+            const elapsed = Date.now() - startTime;
+            const remaining = 4000 - elapsed;
+            if (remaining > 0) {
+                await new Promise(resolve => setTimeout(resolve, remaining));
+            }
         }
 
         updateDashboard(result, schedResult);
@@ -904,9 +906,11 @@ async function runDiagnostic(silent = false) {
     } catch (err) {
         console.error(err);
     } finally {
-        btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Run Diagnostic';
-        if (typeof window.stopDiagnosticAnimation === 'function') {
-            window.stopDiagnosticAnimation();
+        if (!silent) {
+            btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Run Diagnostic';
+            if (typeof window.stopDiagnosticAnimation === 'function') {
+                window.stopDiagnosticAnimation();
+            }
         }
     }
 }
