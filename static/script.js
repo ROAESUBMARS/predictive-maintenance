@@ -406,7 +406,7 @@ function attachEventListeners() {
 
     document.getElementById('leak-select').addEventListener('change', updateRawDataTable);
 
-    document.getElementById('run-diagnostic-btn').addEventListener('click', runDiagnostic);
+    document.getElementById('run-diagnostic-btn').addEventListener('click', () => runDiagnostic());
 
     document.getElementById('live-telemetry-toggle').addEventListener('change', (e) => {
         if (e.target.checked) {
