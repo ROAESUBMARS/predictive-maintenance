@@ -835,7 +835,7 @@ function updateRawDataTable() {
     }
 }
 
-async function runDiagnostic() {
+async function runDiagnostic(silent = false) {
     const data = getSensorData();
     
     // Add alert recipient configurations from UI
@@ -845,9 +845,11 @@ async function runDiagnostic() {
     if (phoneInput) data.alert_phone = phoneInput.value.trim();
 
     const btn = document.getElementById('run-diagnostic-btn');
-    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Analyzing...';
+    if (!silent) {
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Analyzing...';
+    }
     
-    if (typeof window.triggerDiagnosticAnimation === 'function') {
+    if (!silent && typeof window.triggerDiagnosticAnimation === 'function') {
         window.triggerDiagnosticAnimation();
     }
     
@@ -1212,7 +1214,7 @@ function simulateLiveTelemetry() {
     setSliderValue('rpm', Math.min(Math.max(rpm, 0), 5000).toFixed(0));
 
     updateRawDataTable();
-    runDiagnostic();
+    runDiagnostic(true); // silent=true: skip animation and spinner during live telemetry
 }
 
 function updateChartPoint(vib, flow, oil) {
