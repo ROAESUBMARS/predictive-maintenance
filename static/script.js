@@ -55,8 +55,9 @@ let contributionsChart;
 let chartData = {
     labels: [],
     datasets: [
-        { label: 'Temperature (°C)', borderColor: '#f85149', data: [], tension: 0.4 },
-        { label: 'Pressure (psi)', borderColor: '#58a6ff', data: [], tension: 0.4 }
+        { label: 'Vibration (g)', borderColor: '#f0883e', data: [], tension: 0.4, yAxisID: 'yVib' },
+        { label: 'Flow Rate (lpm)', borderColor: '#58a6ff', data: [], tension: 0.4, yAxisID: 'yFlow' },
+        { label: 'Oil Level (%)', borderColor: '#3fb950', data: [], tension: 0.4, yAxisID: 'yOil' }
     ]
 };
 const MAX_DATA_POINTS = 20;
@@ -231,8 +232,9 @@ function initSharedElements() {
     for(let i=MAX_DATA_POINTS; i>0; i--) {
         const t = new Date(now.getTime() - i * 1000);
         chartData.labels.push(t.toLocaleTimeString([], {hour12: false, second: '2-digit'}));
-        chartData.datasets[0].data.push(70);
-        chartData.datasets[1].data.push(100);
+        chartData.datasets[0].data.push(0.020);
+        chartData.datasets[1].data.push(300);
+        chartData.datasets[2].data.push(60);
     }
     telemetryChart = new Chart(ctx, {
         type: 'line',
@@ -243,7 +245,27 @@ function initSharedElements() {
             plugins: { legend: { labels: { color: '#8b949e' } } },
             scales: {
                 x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } },
-                y: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } }
+                yVib: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'Vibration (g)', color: '#f0883e' },
+                    ticks: { color: '#f0883e' },
+                    grid: { color: '#21262d' }
+                },
+                yFlow: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'Flow Rate (lpm)', color: '#58a6ff' },
+                    ticks: { color: '#58a6ff' },
+                    grid: { drawOnChartArea: false }
+                },
+                yOil: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'Oil Level (%)', color: '#3fb950' },
+                    ticks: { color: '#3fb950' },
+                    grid: { drawOnChartArea: false }
+                }
             },
             animation: { duration: 0 }
         }
@@ -875,7 +897,7 @@ async function runDiagnostic() {
         }
 
         updateDashboard(result, schedResult);
-        updateChartPoint(data.Temperature_C, data.Pressure_psi);
+        updateChartPoint(data.Vibration_g, data.Flow_Rate_lpm, data.Oil_Level_pct);
 
     } catch (err) {
         console.error(err);
@@ -1193,16 +1215,18 @@ function simulateLiveTelemetry() {
     runDiagnostic();
 }
 
-function updateChartPoint(temp, pres) {
+function updateChartPoint(vib, flow, oil) {
     const now = new Date();
     chartData.labels.push(now.toLocaleTimeString([], {hour12: false, second: '2-digit'}));
-    chartData.datasets[0].data.push(temp);
-    chartData.datasets[1].data.push(pres);
+    chartData.datasets[0].data.push(parseFloat(vib));
+    chartData.datasets[1].data.push(parseFloat(flow));
+    chartData.datasets[2].data.push(parseFloat(oil));
     
     if (chartData.labels.length > MAX_DATA_POINTS) {
         chartData.labels.shift();
         chartData.datasets[0].data.shift();
         chartData.datasets[1].data.shift();
+        chartData.datasets[2].data.shift();
     }
     telemetryChart.update();
 }
