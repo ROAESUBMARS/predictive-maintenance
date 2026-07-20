@@ -1,3 +1,23 @@
+// ── Toast Notification System ────────────────────────────────────────────────
+function showToast(message, type = 'info', duration = 4000) {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:999999;display:flex;flex-direction:column;gap:10px;max-width:380px;';
+        document.body.appendChild(container);
+    }
+    const icons = { info: 'fa-circle-info', success: 'fa-circle-check', warning: 'fa-triangle-exclamation', error: 'fa-circle-xmark' };
+    const colors = { info: '#58a6ff', success: '#3fb950', warning: '#f5a623', error: '#f85149' };
+    const toast = document.createElement('div');
+    toast.style.cssText = `background:rgba(22,27,34,0.97);border:1px solid ${colors[type]};border-left:4px solid ${colors[type]};border-radius:10px;padding:14px 18px;display:flex;align-items:flex-start;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);backdrop-filter:blur(12px);opacity:0;transform:translateX(30px);transition:all 0.3s ease;pointer-events:auto;`;
+    toast.innerHTML = `<i class="fa-solid ${icons[type]}" style="color:${colors[type]};margin-top:2px;flex-shrink:0;"></i><span style="color:#e6edf3;font-size:13px;line-height:1.5;font-family:'Inter',sans-serif;">${message}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:16px;margin-left:auto;padding:0;line-height:1;flex-shrink:0;">×</button>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(0)'; });
+    setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(30px)'; setTimeout(() => toast.remove(), 300); }, duration);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function getApiUrl(endpoint) {
     const input = document.getElementById('api-url');
     let base = input ? input.value.trim() : '';
@@ -17,7 +37,7 @@ async function authFetch(url, options = {}) {
     }
     const response = await fetch(url, options);
     if (response.status === 401) {
-        alert("Session expired or unauthorized. Please authenticate again.");
+        showToast("Session expired or unauthorized. Please log in again.", 'error', 5000);
         logout();
         throw new Error("Unauthorized");
     }
@@ -283,7 +303,7 @@ function initSharedElements() {
 
         const div = document.createElement('div');
         div.className = `fleet-tile ${p.status}`;
-        div.onclick = () => alert(`${p.name}: ${p.fault} (${p.severity})`);
+        div.onclick = () => showToast(`<strong>${p.name}</strong> — ${p.fault} <span style="opacity:0.7">(${p.severity})</span>`, p.status === 'red' ? 'error' : p.status === 'yellow' ? 'warning' : 'success');
         div.innerHTML = `
             <div>${p.status==='red'?'🔴':p.status==='yellow'?'🟡':'🟢'}</div>
             <div class="fl-id">${p.id}</div>
@@ -429,7 +449,7 @@ function attachEventListeners() {
         const days = document.getElementById('wo-est-days').value || 0;
         
         if (!currentDiagnosis) {
-            alert('Please run a diagnostic first to determine the fault.');
+            showToast('Please run a diagnostic first to determine the fault.', 'warning');
             return;
         }
 
@@ -462,7 +482,7 @@ function attachEventListeners() {
         document.getElementById('wo-est-days').value = '';
         
         renderEngineerWorkOrdersTable();
-        alert(`Work Order ${woNumber} generated and assigned to ${assignee.replace('Tech: ', '')}.`);
+        showToast(`Work Order <strong>${woNumber}</strong> generated and assigned to ${assignee.replace('Tech: ', '')}.`, 'success');
     });
 
     // Tech verification handlers
@@ -478,7 +498,7 @@ function attachEventListeners() {
                 activeTechWO.status = 'In Progress';
             }
             selectTechWorkOrder(activeTechWO);
-            alert(`Asset Verified. Work Order ${activeTechWO.id} unlocked.`);
+            showToast(`Asset Verified. Work Order <strong>${activeTechWO.id}</strong> unlocked.`, 'success');
         }
     });
 
@@ -495,7 +515,7 @@ function attachEventListeners() {
             if (typeof window.triggerFulfillmentAnimation === 'function') {
                 window.triggerFulfillmentAnimation();
             } else {
-                alert(`Work Order ${activeTechWO.id} completed. Pump parameters returning to nominal baseline values.`);
+                showToast(`Work Order <strong>${activeTechWO.id}</strong> completed. Pump returning to nominal baseline.`, 'success', 5000);
             }
             renderTechWorkOrders();
         }
@@ -521,7 +541,7 @@ function attachEventListeners() {
             const result = await response.json();
             
             if (!response.ok) {
-                alert(result.error || 'Authentication failed.');
+                showToast(result.error || 'Authentication failed.', 'error');
                 return;
             }
 
@@ -531,7 +551,7 @@ function attachEventListeners() {
             enterApp(role);
         } catch (err) {
             console.error(err);
-            alert('Error communicating with authentication server.');
+            showToast('Error communicating with authentication server.', 'error');
         } finally {
             btn.innerHTML = origText;
         }
@@ -610,6 +630,19 @@ function applyTheme(theme) {
             chart.update();
         }
     });
+
+    // Update named axes on the telemetry chart (yVib, yFlow, yOil)
+    if (telemetryChart && telemetryChart.options.scales) {
+        ['yVib', 'yFlow', 'yOil'].forEach(axisId => {
+            const axis = telemetryChart.options.scales[axisId];
+            if (axis) {
+                if (axis.ticks) axis.ticks.color = tickColor;
+                if (axis.grid) axis.grid.color = gridColor;
+                if (axis.title) axis.title.color = tickColor;
+            }
+        });
+        telemetryChart.update();
+    }
 }
 
 function renderTechRoster() {
@@ -865,7 +898,7 @@ async function runDiagnostic(silent = false) {
         
         if (result.error) {
             console.error(result.error);
-            if (!silent) alert('Error running diagnostic.');
+            if (!silent) showToast('Error running diagnostic. Check API connection.', 'error');
             return;
         }
 
@@ -978,6 +1011,16 @@ function updateDashboard(result, schedResult) {
             fc.Coolant_Leak || 0
         ];
         contributionsChart.update();
+    }
+
+    // Update HP-01 fleet map tile to reflect latest diagnostic result
+    const hp01 = PUMPS.find(p => p.id === 'HP-01');
+    if (hp01) {
+        hp01.fault = result.fault;
+        hp01.severity = result.severity === 'ok' ? 'Normal' : result.severity.charAt(0).toUpperCase() + result.severity.slice(1);
+        hp01.status = result.fault_code === 0 ? 'green' : (result.severity === 'critical' ? 'red' : 'yellow');
+        hp01.time = 'just now';
+        renderFleetMap();
     }
 }
 

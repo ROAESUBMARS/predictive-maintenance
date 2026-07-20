@@ -313,7 +313,7 @@ def health():
 
 
 @app.route("/predict", methods=["POST"])
-@rate_limit(limit=10, period=60)
+@rate_limit(limit=120, period=60)  # Raised to support live telemetry (every 2s = 30 req/min)
 def predict():
     """
     Predict fault from sensor data.
@@ -400,7 +400,7 @@ def predict():
 
 
 @app.route("/schedule", methods=["POST"])
-@rate_limit(limit=10, period=60)
+@rate_limit(limit=120, period=60)
 def schedule():
     """
     Intelligent maintenance scheduling endpoint.
@@ -427,7 +427,7 @@ def schedule():
 
 
 @app.route("/recommend", methods=["POST"])
-@rate_limit(limit=10, period=60)
+@rate_limit(limit=30, period=60)
 def recommend():
     """
     Standalone AI recommendation endpoint.
@@ -600,7 +600,7 @@ def update_config():
 
 
 @app.route("/chat", methods=["POST"])
-@rate_limit(limit=10, period=60)
+@rate_limit(limit=30, period=60)
 def chat():
     data = request.get_json()
     if not data:
@@ -624,7 +624,7 @@ def chat():
     gemini_key = os.environ.get("GEMINI_API_KEY")
     if gemini_key:
         gemini_key = gemini_key.strip()
-        if gemini_key.startswith("AQ.") or "placeholder" in gemini_key.lower() or "your_" in gemini_key.lower() or len(gemini_key) < 10:
+        if "placeholder" in gemini_key.lower() or "your_" in gemini_key.lower() or len(gemini_key) < 10:
             gemini_key = None
 
     nvidia_key = os.environ.get("NVIDIA_API_KEY")
@@ -632,7 +632,9 @@ def chat():
         nvidia_key = nvidia_key.strip()
         if "placeholder" in nvidia_key.lower() or "your_" in nvidia_key.lower() or len(nvidia_key) < 10:
             nvidia_key = None
-            
+
+    # NVIDIA_MODEL takes precedence; falls back to GEMINI_MODEL for backwards compatibility
+    nvidia_model = os.environ.get("NVIDIA_MODEL") or os.environ.get("GEMINI_MODEL", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning")
     gemini_model = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 
     azure_key = os.environ.get("AZURE_OPENAI_API_KEY")
@@ -704,7 +706,7 @@ def chat():
     import requests
     import json
 
-    if nvidia_key and (gemini_model.startswith("nvidia/") or not gemini_key):
+    if nvidia_key and (nvidia_model.startswith("nvidia/") or not gemini_key):
         payload_messages = [{"role": "system", "content": system_prompt}]
         if not messages:
             payload_messages.append({"role": "user", "content": "Hello! Please analyze the current system state."})
@@ -721,7 +723,7 @@ def chat():
             "Authorization": f"Bearer {nvidia_key}"
         }
         body = {
-            "model": gemini_model,
+            "model": nvidia_model,
             "messages": payload_messages,
             "temperature": 0.7,
             "max_tokens": 1000,
