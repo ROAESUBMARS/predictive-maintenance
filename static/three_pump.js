@@ -1,12 +1,13 @@
 // ═════════════════════════════════════════════════════════════════════════════
 // THREE.JS 3D DIGITAL TWIN & LANDING PAGE VISUALIZER
-// NMU AI Predictive Maintenance System — Cutaway Hydraulic Gear Pump Model
+// NMU AI Predictive Maintenance System — Dual-Motor Industrial HPU Skid Model
 // ═════════════════════════════════════════════════════════════════════════════
 
 let landingBgScene, landingBgCamera, landingBgRenderer, landingParticles;
-let pumpScene, pumpCamera, pumpRenderer, pumpGroup, driveGearMesh, drivenGearMesh, fluidMesh;
-let active3DMode = 'solid'; // 'solid', 'hologram', 'thermal'
-let current3DTelemetry = { temp: 74, vib: 0.024, fault: 0 };
+let pumpScene, pumpCamera, pumpRenderer, pumpGroup;
+let motorAMesh, motorBMesh, driveGearMesh, drivenGearMesh, fluidMesh, heatFanMesh;
+let active3DMode = 'solid'; // 'solid', 'hologram', 'thermal', 'photo', 'split'
+let current3DTelemetry = { temp: 74, vib: 0.024, fault: 0, motorA_rpm: 1750, motorB_rpm: 1748, oil_level: 82, pressure_bar: 185 };
 let isAutoRotating = true;
 
 // Initialize 3D Background Particle Constellation
@@ -82,13 +83,19 @@ function initLanding3DBg() {
     animateBg();
 }
 
-// Build 3D Technical Cutaway Gear Pump Procedural Model (Matching Technical Blueprint Image)
+// Build 3D Technical Procedural Model of Heavy-Duty Dual-Motor HPU Skid System
 function build3DPumpModel() {
     pumpGroup = new THREE.Group();
 
     // ── Color Palette & Materials ──
-    const darkNavyMat = new THREE.MeshStandardMaterial({
-        color: 0x162842,
+    const hpuBlueMat = new THREE.MeshStandardMaterial({
+        color: 0x0f52ba,
+        metalness: 0.7,
+        roughness: 0.35
+    });
+
+    const motorBlueMat = new THREE.MeshStandardMaterial({
+        color: 0x1d6ee2,
         metalness: 0.8,
         roughness: 0.3
     });
@@ -99,17 +106,22 @@ function build3DPumpModel() {
         roughness: 0.15
     });
 
+    const darkSteelMat = new THREE.MeshStandardMaterial({
+        color: 0x2d3748,
+        metalness: 0.8,
+        roughness: 0.4
+    });
+
+    const panelGreyMat = new THREE.MeshStandardMaterial({
+        color: 0xc8d1d9,
+        metalness: 0.3,
+        roughness: 0.5
+    });
+
     const brassMat = new THREE.MeshStandardMaterial({
         color: 0xd4a017,
         metalness: 0.85,
         roughness: 0.25
-    });
-
-    const ghostWireMat = new THREE.MeshBasicMaterial({
-        color: 0x58a6ff,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.4
     });
 
     const glassMat = new THREE.MeshPhysicalMaterial({
@@ -124,94 +136,118 @@ function build3DPumpModel() {
     const fluidMat = new THREE.MeshStandardMaterial({
         color: 0x0969da,
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.75,
         roughness: 0.2
     });
 
-    // 1. FRONT SQUARE MOUNTING FLANGE (WITH 4 CORNER BOLT HOLES)
-    const flangeShape = new THREE.Shape();
-    const w = 2.4, h = 2.4, r = 0.3;
-    flangeShape.moveTo(-w + r, -h);
-    flangeShape.lineTo(w - r, -h);
-    flangeShape.quadraticCurveTo(w, -h, w, -h + r);
-    flangeShape.lineTo(w, h - r);
-    flangeShape.quadraticCurveTo(w, h, w - r, h);
-    flangeShape.lineTo(-w + r, h);
-    flangeShape.quadraticCurveTo(-w, h, -w, h - r);
-    flangeShape.lineTo(-w, -h + r);
-    flangeShape.quadraticCurveTo(-w, -h, -w + r, -h);
-
-    const extrudeSettings = { depth: 0.4, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.08, bevelThickness: 0.08 };
-    const flangeGeo = new THREE.ExtrudeGeometry(flangeShape, extrudeSettings);
-    const flangeMesh = new THREE.Mesh(flangeGeo, darkNavyMat);
-    flangeMesh.position.set(0, 0, 3.2);
-    pumpGroup.add(flangeMesh);
-
-    // 4 Corner Bolt Holes
-    const holePos = [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]];
-    holePos.forEach(([hx, hy]) => {
-        const holeGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.6, 16);
-        const holeMesh = new THREE.Mesh(holeGeo, steelMat);
-        holeMesh.position.set(hx, hy, 3.4);
-        holeMesh.rotation.x = Math.PI / 2;
-        pumpGroup.add(holeMesh);
+    const hoseMat = new THREE.MeshStandardMaterial({
+        color: 0x1a202c,
+        roughness: 0.8,
+        metalness: 0.1
     });
 
-    // Concentric Circular Hub Rings on Front Flange
-    for (let rVal of [1.6, 1.1]) {
-        const ringGeo = new THREE.TorusGeometry(rVal, 0.08, 16, 32);
-        const ringMesh = new THREE.Mesh(ringGeo, steelMat);
-        ringMesh.position.set(0, 0, 3.65);
-        pumpGroup.add(ringMesh);
+    // 1. BASE SKID STRUCTURAL TRAY & FRAME
+    const skidBaseGeo = new THREE.BoxGeometry(10.5, 0.4, 7.5);
+    const skidBaseMesh = new THREE.Mesh(skidBaseGeo, hpuBlueMat);
+    skidBaseMesh.position.set(0, -2.4, 0);
+    pumpGroup.add(skidBaseMesh);
+
+    // Skid Outer Retaining Lips
+    const lipFrontGeo = new THREE.BoxGeometry(10.5, 0.5, 0.3);
+    const lipFront = new THREE.Mesh(lipFrontGeo, hpuBlueMat);
+    lipFront.position.set(0, -2.15, 3.6);
+    pumpGroup.add(lipFront);
+
+    const lipBack = lipFront.clone();
+    lipBack.position.set(0, -2.15, -3.6);
+    pumpGroup.add(lipBack);
+
+    // 2. DUAL ELECTRIC MOTORS (FRONT RIGHT & FRONT CENTER)
+    function buildElectricMotor(nameLabel) {
+        const mGroup = new THREE.Group();
+
+        // Main Cylindrical Stator Housing
+        const bodyGeo = new THREE.CylinderGeometry(1.05, 1.05, 2.8, 32);
+        const bodyMesh = new THREE.Mesh(bodyGeo, motorBlueMat);
+        bodyMesh.rotation.z = Math.PI / 2;
+        mGroup.add(bodyMesh);
+
+        // Cooling Fins Array around Stator
+        for (let i = 0; i < 8; i++) {
+            const finAngle = (i / 8) * Math.PI * 2;
+            const finGeo = new THREE.BoxGeometry(2.6, 0.08, 0.12);
+            const finMesh = new THREE.Mesh(finGeo, steelMat);
+            finMesh.position.set(0, Math.cos(finAngle) * 1.1, Math.sin(finAngle) * 1.1);
+            mGroup.add(finMesh);
+        }
+
+        // Rear Cooling Fan Guard Shroud & Mesh
+        const shroudGeo = new THREE.CylinderGeometry(1.1, 1.1, 0.5, 32);
+        const shroudMesh = new THREE.Mesh(shroudGeo, darkSteelMat);
+        shroudMesh.rotation.z = Math.PI / 2;
+        shroudMesh.position.set(1.5, 0, 0);
+        mGroup.add(shroudMesh);
+
+        const grilleRingGeo = new THREE.TorusGeometry(0.85, 0.06, 16, 24);
+        const grilleMesh = new THREE.Mesh(grilleRingGeo, steelMat);
+        grilleMesh.position.set(1.76, 0, 0);
+        grilleMesh.rotation.y = Math.PI / 2;
+        mGroup.add(grilleMesh);
+
+        // Front End Bell & Drive Shaft
+        const shaftGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.2, 24);
+        const shaftMesh = new THREE.Mesh(shaftGeo, steelMat);
+        shaftMesh.rotation.z = Math.PI / 2;
+        shaftMesh.position.set(-1.8, 0, 0);
+        mGroup.add(shaftMesh);
+
+        // Junction Electrical Box on Top of Motor
+        const jboxGeo = new THREE.BoxGeometry(0.8, 0.5, 0.8);
+        const jboxMesh = new THREE.Mesh(jboxGeo, darkSteelMat);
+        jboxMesh.position.set(-0.2, 1.25, 0);
+        mGroup.add(jboxMesh);
+
+        return mGroup;
     }
 
-    // 2. DRIVE SHAFT WITH KEYWAY SLOT
-    const shaftGeo = new THREE.CylinderGeometry(0.55, 0.55, 2.6, 32);
-    const shaftMesh = new THREE.Mesh(shaftGeo, steelMat);
-    shaftMesh.position.set(0, 0, 4.5);
-    shaftMesh.rotation.x = Math.PI / 2;
-    pumpGroup.add(shaftMesh);
+    // Motor A (Front Left-Center)
+    motorAMesh = buildElectricMotor("Motor A");
+    motorAMesh.position.set(0.6, -1.2, 1.8);
+    pumpGroup.add(motorAMesh);
 
-    // Keyway Drive Slot
-    const keywayGeo = new THREE.BoxGeometry(0.18, 0.2, 1.0);
-    const keywayMesh = new THREE.Mesh(keywayGeo, brassMat);
-    keywayMesh.position.set(0, 0.55, 4.5);
-    pumpGroup.add(keywayMesh);
+    // Motor B (Front Right)
+    motorBMesh = buildElectricMotor("Motor B");
+    motorBMesh.position.set(3.6, -1.2, 1.8);
+    pumpGroup.add(motorBMesh);
 
-    // 3. CUTAWAY PUMP HOUSING (3/4 SOLID, 1/4 CUTAWAY EXPOSING GEARS)
-    const housingGeo = new THREE.CylinderGeometry(2.2, 2.2, 5.2, 32, 1, false, 0, Math.PI * 1.45);
-    const housingMesh = new THREE.Mesh(housingGeo, darkNavyMat);
-    housingMesh.position.set(0, 0, 0.6);
-    housingMesh.rotation.x = Math.PI / 2;
-    housingMesh.rotation.y = Math.PI * 0.15;
-    pumpGroup.add(housingMesh);
+    // 3. MAIN HYDRAULIC RESERVOIR TANK (LEFT SKID ASSEMBLY)
+    const tankGroup = new THREE.Group();
 
-    // Ghosted Wireframe Casing (matching dotted blueprint lines in image)
-    const ghostGeo = new THREE.CylinderGeometry(2.22, 2.22, 5.22, 24);
-    const ghostMesh = new THREE.Mesh(ghostGeo, ghostWireMat);
-    ghostMesh.position.set(0, 0, 0.6);
-    ghostMesh.rotation.x = Math.PI / 2;
-    pumpGroup.add(ghostMesh);
+    // Blue Tank Body
+    const tankGeo = new THREE.BoxGeometry(4.2, 3.6, 5.8);
+    const tankMesh = new THREE.Mesh(tankGeo, hpuBlueMat);
+    tankGroup.add(tankMesh);
 
-    // Rear Mounting Flange Plate
-    const rearFlangeMesh = new THREE.Mesh(flangeGeo, darkNavyMat);
-    rearFlangeMesh.position.set(0, 0, -2.2);
-    pumpGroup.add(rearFlangeMesh);
+    // Front Inspection Access Plate (Circular Hatch)
+    const hatchGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.12, 24);
+    const hatchMesh = new THREE.Mesh(hatchGeo, darkSteelMat);
+    hatchMesh.position.set(-2.11, -0.6, 0.8);
+    hatchMesh.rotation.z = Math.PI / 2;
+    tankGroup.add(hatchMesh);
 
-    // Side Mounting Bracket Feet
-    const footGeo = new THREE.BoxGeometry(1.0, 0.5, 1.6);
-    const footLeft = new THREE.Mesh(footGeo, darkNavyMat);
-    footLeft.position.set(-1.8, -2.1, 0.6);
-    pumpGroup.add(footLeft);
+    // Oil Sight Gauge Glass on Tank Side
+    const sightGeo = new THREE.BoxGeometry(0.1, 1.4, 0.3);
+    const sightMesh = new THREE.Mesh(sightGeo, glassMat);
+    sightMesh.position.set(-2.12, 0.2, 2.0);
+    tankGroup.add(sightMesh);
 
-    // Side Suction Port (Inlet Opening)
-    const portGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.8, 24);
-    const portMesh = new THREE.Mesh(portGeo, steelMat);
-    portMesh.position.set(-2.0, 0, 1.2);
-    portMesh.rotation.z = Math.PI / 2;
-    pumpGroup.add(portMesh);
+    // Inner Hydraulic Fluid Level Visualization
+    const fluidGeo = new THREE.BoxGeometry(4.0, 2.6, 5.6);
+    fluidMesh = new THREE.Mesh(fluidGeo, fluidMat);
+    fluidMesh.position.set(0, -0.4, 0);
+    tankGroup.add(fluidMesh);
 
-    // 4. INTERNAL INTERMESHING PRECISION GEARS (VISIBLE THROUGH CUTAWAY)
+    // 4. CUTAWAY PRECISION GEAR SECTION ON TANK FRONT
     function createGear(radius, teeth, depth) {
         const gearGroup = new THREE.Group();
         const coreGeo = new THREE.CylinderGeometry(radius, radius, depth, 32);
@@ -221,7 +257,7 @@ function build3DPumpModel() {
 
         for (let i = 0; i < teeth; i++) {
             const angle = (i / teeth) * Math.PI * 2;
-            const toothGeo = new THREE.BoxGeometry(0.18, 0.35, depth);
+            const toothGeo = new THREE.BoxGeometry(0.16, 0.32, depth);
             const toothMesh = new THREE.Mesh(toothGeo, brassMat);
             toothMesh.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, 0);
             toothMesh.rotation.z = angle;
@@ -230,94 +266,102 @@ function build3DPumpModel() {
         return gearGroup;
     }
 
-    driveGearMesh = createGear(0.9, 14, 1.4);
-    driveGearMesh.position.set(0, 0.5, 0.6);
-    pumpGroup.add(driveGearMesh);
+    driveGearMesh = createGear(0.75, 12, 1.0);
+    driveGearMesh.position.set(-0.2, 0.4, 2.92);
+    tankGroup.add(driveGearMesh);
 
-    drivenGearMesh = createGear(0.9, 14, 1.4);
-    drivenGearMesh.position.set(0, -0.6, 0.6);
-    pumpGroup.add(drivenGearMesh);
+    drivenGearMesh = createGear(0.75, 12, 1.0);
+    drivenGearMesh.position.set(-0.2, -0.6, 2.92);
+    tankGroup.add(drivenGearMesh);
 
-    // Inner Shaft connecting drive gear
-    const innerShaftGeo = new THREE.CylinderGeometry(0.35, 0.35, 4.5, 24);
-    const innerShaftMesh = new THREE.Mesh(innerShaftGeo, steelMat);
-    innerShaftMesh.position.set(0, 0.5, 0.8);
-    innerShaftMesh.rotation.x = Math.PI / 2;
-    pumpGroup.add(innerShaftMesh);
-
-    // 5. FLUID RESERVOIR TANK & SOLENOID ASSEMBLY (LEFT SIDE)
-    const tankGroup = new THREE.Group();
-
-    // Outer Glass Tank
-    const tankGeo = new THREE.BoxGeometry(2.6, 1.8, 3.2);
-    const tankMesh = new THREE.Mesh(tankGeo, glassMat);
-    tankGroup.add(tankMesh);
-
-    // Wireframe Tank Outline
-    const tankWire = new THREE.Mesh(tankGeo, ghostWireMat);
-    tankGroup.add(tankWire);
-
-    // Inner Fluid Level
-    const fluidGeo = new THREE.BoxGeometry(2.5, 1.1, 3.1);
-    fluidMesh = new THREE.Mesh(fluidGeo, fluidMat);
-    fluidMesh.position.set(0, -0.3, 0);
-    tankGroup.add(fluidMesh);
-
-    // Vertical Dip Tube inside tank
-    const tubeGeo = new THREE.CylinderGeometry(0.18, 0.18, 1.6, 16);
-    const tubeMesh = new THREE.Mesh(tubeGeo, steelMat);
-    tubeMesh.position.set(-0.4, 0.1, 0);
-    tankGroup.add(tubeMesh);
-
-    // Solenoid Control Valve mounted on top of tank
-    const solenoidGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 24);
-    const solenoidMesh = new THREE.Mesh(solenoidGeo, darkNavyMat);
-    solenoidMesh.position.set(-0.4, 1.4, 0);
-    tankGroup.add(solenoidMesh);
-
-    const capGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.2, 24);
-    const capMesh = new THREE.Mesh(capGeo, steelMat);
-    capMesh.position.set(-0.4, 2.1, 0);
-    tankGroup.add(capMesh);
-
-    // Fluid Hose connecting Tank to Pump Inlet Port
-    const hosePoints = [
-        new THREE.Vector3(-0.4, 1.4, 0),
-        new THREE.Vector3(-2.4, 1.4, 0),
-        new THREE.Vector3(-3.8, 0, 1.2)
-    ];
-    const curve = new THREE.CatmullRomCurve3(hosePoints);
-    const hoseGeo = new THREE.TubeGeometry(curve, 20, 0.14, 8, false);
-    const hoseMesh = new THREE.Mesh(hoseGeo, steelMat);
-    tankGroup.add(hoseMesh);
-
-    tankGroup.position.set(-5.2, -1.0, 0.6);
+    tankGroup.position.set(-2.8, -0.4, -0.6);
     pumpGroup.add(tankGroup);
 
-    // 6. TELEMETRY HOTSPOT CALLOUT NODES (MATCHING BLUEPRINT IMAGE)
-    const nodesData = [
-        { name: 'Drive Shaft Keyway', pos: [0, 0.6, 4.6], color: 0x58a6ff },
-        { name: 'Internal Gear Mesh (Vibration Target)', pos: [0, 0.4, 0.6], color: 0xf85149 },
-        { name: 'Pump Volute Chamber', pos: [0, 1.8, -0.6], color: 0x3fb950 },
-        { name: 'Fluid Reservoir & Solenoid', pos: [-5.2, 0.6, 0.6], color: 0xf5a623 }
-    ];
+    // 5. REAR TUBULAR FRAME & ELECTRICAL CONTROL / PLC CABINET (RIGHT REAR)
+    const frameGroup = new THREE.Group();
 
-    nodesData.forEach(n => {
-        const nodeGeo = new THREE.SphereGeometry(0.28, 16, 16);
-        const nodeMat = new THREE.MeshBasicMaterial({ color: n.color });
-        const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
-        nodeMesh.position.set(...n.pos);
-        nodeMesh.userData = { name: n.name };
-        pumpGroup.add(nodeMesh);
+    // Tubular Steel Support Columns
+    const postGeo = new THREE.CylinderGeometry(0.18, 0.18, 4.8, 16);
+    const p1 = new THREE.Mesh(postGeo, hpuBlueMat);
+    p1.position.set(3.2, 0, -2.6);
+    frameGroup.add(p1);
 
-        // Ring pulse around node
-        const ringGeo = new THREE.TorusGeometry(0.45, 0.04, 16, 32);
-        const ringMat = new THREE.MeshBasicMaterial({ color: n.color, transparent: true, opacity: 0.7 });
-        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-        ringMesh.position.set(...n.pos);
-        ringMesh.rotation.x = Math.PI / 2;
-        pumpGroup.add(ringMesh);
-    });
+    const p2 = p1.clone();
+    p2.position.set(4.6, 0, -2.6);
+    frameGroup.add(p2);
+
+    const p3 = p1.clone();
+    p3.position.set(4.6, 0, 1.2);
+    frameGroup.add(p3);
+
+    // Grey Enclosure Box (PLC Control Cabinet)
+    const cabinetGeo = new THREE.BoxGeometry(0.4, 4.2, 3.2);
+    const cabinetMesh = new THREE.Mesh(cabinetGeo, panelGreyMat);
+    cabinetMesh.position.set(4.4, 0.6, -0.6);
+    frameGroup.add(cabinetMesh);
+
+    // Door Handle & Panel Bezel
+    const bezelGeo = new THREE.BoxGeometry(0.08, 3.8, 2.8);
+    const bezelMesh = new THREE.Mesh(bezelGeo, darkSteelMat);
+    bezelMesh.position.set(4.18, 0.6, -0.6);
+    frameGroup.add(bezelMesh);
+
+    // Conduit Pipes connecting Control Panel to Motors
+    const conduitGeo = new THREE.CylinderGeometry(0.1, 0.1, 3.5, 12);
+    const c1 = new THREE.Mesh(conduitGeo, steelMat);
+    c1.position.set(3.8, -0.8, 0.2);
+    c1.rotation.z = Math.PI / 3;
+    frameGroup.add(c1);
+
+    pumpGroup.add(frameGroup);
+
+    // 6. TOP AIR HEAT EXCHANGER & RADIATOR COOLING FAN (TOP TANK MOUNT)
+    const coolerGroup = new THREE.Group();
+
+    // Heat Exchanger Housing
+    const coolerBodyGeo = new THREE.BoxGeometry(2.2, 1.2, 2.2);
+    const coolerBodyMesh = new THREE.Mesh(coolerBodyGeo, hpuBlueMat);
+    coolerGroup.add(coolerBodyMesh);
+
+    // Round Top Fan Shroud
+    const shroudGeo = new THREE.CylinderGeometry(0.8, 0.8, 0.3, 24);
+    const shroudMesh = new THREE.Mesh(shroudGeo, darkSteelMat);
+    shroudMesh.position.set(0, 0.7, 0);
+    coolerGroup.add(shroudMesh);
+
+    // Fan Blade Mesh Inside Shroud
+    const fanGeo = new THREE.BoxGeometry(1.3, 0.05, 0.22);
+    heatFanMesh = new THREE.Mesh(fanGeo, steelMat);
+    heatFanMesh.position.set(0, 0.82, 0);
+    coolerGroup.add(heatFanMesh);
+
+    const fanCross = heatFanMesh.clone();
+    fanCross.rotation.y = Math.PI / 2;
+    coolerGroup.add(fanCross);
+
+    coolerGroup.position.set(-2.8, 2.2, -0.6);
+    pumpGroup.add(coolerGroup);
+
+    // 7. HIGH-PRESSURE HYDRAULIC HOSES & MANIFOLD TUBING
+    function createHose(pts) {
+        const curve = new THREE.CatmullRomCurve3(pts);
+        const tubeGeo = new THREE.TubeGeometry(curve, 24, 0.12, 8, false);
+        return new THREE.Mesh(tubeGeo, hoseMat);
+    }
+
+    const hose1 = createHose([
+        new THREE.Vector3(-1.2, 1.6, -0.6),
+        new THREE.Vector3(-0.4, 2.2, 0.8),
+        new THREE.Vector3(0.6, 0.2, 1.8)
+    ]);
+    pumpGroup.add(hose1);
+
+    const hose2 = createHose([
+        new THREE.Vector3(-1.2, 1.2, -0.6),
+        new THREE.Vector3(1.2, 2.0, 0.6),
+        new THREE.Vector3(3.6, 0.2, 1.8)
+    ]);
+    pumpGroup.add(hose2);
 
     return pumpGroup;
 }
@@ -330,28 +374,28 @@ function initPump3DViewer(canvasId, containerId) {
 
     pumpScene = new THREE.Scene();
     pumpCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    pumpCamera.position.set(9, 6, 12);
+    pumpCamera.position.set(11, 7, 14);
 
     pumpRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
     pumpRenderer.setSize(container.clientWidth, container.clientHeight);
     pumpRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     // Studio Technical Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
     pumpScene.add(ambientLight);
 
-    const dirLight1 = new THREE.DirectionalLight(0x58a6ff, 1.4);
+    const dirLight1 = new THREE.DirectionalLight(0x58a6ff, 1.5);
     dirLight1.position.set(12, 18, 12);
     pumpScene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0xbc8cff, 0.8);
+    const dirLight2 = new THREE.DirectionalLight(0xbc8cff, 0.85);
     dirLight2.position.set(-12, -10, -12);
     pumpScene.add(dirLight2);
 
     // Build Model
     const model = build3DPumpModel();
     pumpScene.add(model);
-    pumpCamera.lookAt(-1, 0, 1);
+    pumpCamera.lookAt(0, 0, 0);
 
     // Orbit Drag Controls
     let isDragging = false;
@@ -379,7 +423,7 @@ function initPump3DViewer(canvasId, containerId) {
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
         pumpCamera.position.z += e.deltaY * 0.01;
-        pumpCamera.position.z = Math.max(6, Math.min(22, pumpCamera.position.z));
+        pumpCamera.position.z = Math.max(6, Math.min(26, pumpCamera.position.z));
     }, { passive: false });
 
     // Window Resize
@@ -400,6 +444,11 @@ function initPump3DViewer(canvasId, containerId) {
             drivenGearMesh.rotation.z -= 0.05;
         }
 
+        // Spin Heat Exchanger Radiator Fan
+        if (heatFanMesh) {
+            heatFanMesh.rotation.y += 0.12;
+        }
+
         if (isAutoRotating && !isDragging && pumpGroup) {
             pumpGroup.rotation.y += 0.005;
         }
@@ -417,9 +466,191 @@ function initPump3DViewer(canvasId, containerId) {
     render3DPump();
 }
 
-// Render Mode Toggle
+// ═════════════════════════════════════════════════════════════════════════════
+// PHYSICAL HPU PHOTO SPEC & HOTSPOT HUD OVERLAY SYSTEM
+// ═════════════════════════════════════════════════════════════════════════════
+
+const hpuHotspots = [
+    {
+        key: 'motor_a',
+        name: 'Drive Motor A (Primary)',
+        top: '68%',
+        left: '45%',
+        type: 'warning',
+        icon: 'fa-bolt',
+        metrics: { rpm: '1,750 RPM', vib: '0.042 in/s (ALERT)', temp: '78.5 °C', load: '88%' },
+        desc: 'Primary 45kW 3-Phase Electric Induction Motor. Elevated vibration frequency detected on front bearing.'
+    },
+    {
+        key: 'motor_b',
+        name: 'Drive Motor B (Secondary)',
+        top: '62%',
+        left: '68%',
+        type: 'success',
+        icon: 'fa-microchip',
+        metrics: { rpm: '1,748 RPM', vib: '0.018 in/s (NOMINAL)', temp: '64.2 °C', load: '45%' },
+        desc: 'Auxiliary 45kW Electric Motor. Operating in synchronized load-sharing mode with clean vibration harmonics.'
+    },
+    {
+        key: 'reservoir',
+        name: 'Hydraulic Oil Reservoir Skid',
+        top: '48%',
+        left: '22%',
+        type: 'success',
+        icon: 'fa-oil-can',
+        metrics: { level: '82% (Nominal)', temp: '54.0 °C', ISO_clean: 'ISO 16/14/11', pressure: '185 Bar' },
+        desc: '800-Liter Heavy Duty Steel Oil Reservoir Tank with integral sight glass and suction strainers.'
+    },
+    {
+        key: 'panel',
+        name: 'PLC & Electrical Control Cabinet',
+        top: '32%',
+        left: '86%',
+        type: 'success',
+        icon: 'fa-server',
+        metrics: { voltage: '415 V (3-Phase)', current: '64 A', plc_status: 'ONLINE', bus: 'Modbus TCP' },
+        desc: 'IP65 Rated Control Enclosure housing main circuit breakers, star-delta starters, and AI edge gateway.'
+    },
+    {
+        key: 'cooler',
+        name: 'Air Heat Exchanger & Fan Module',
+        top: '12%',
+        left: '42%',
+        type: 'success',
+        icon: 'fa-fan',
+        metrics: { air_flow: '4,200 m³/h', fan_rpm: '1,450 RPM', delta_t: '-12.5 °C' },
+        desc: 'Top-mounted air-to-oil heat exchanger unit with thermostatic fan control.'
+    },
+    {
+        key: 'manifold',
+        name: 'High-Pressure Hoses & Manifold',
+        top: '30%',
+        left: '26%',
+        type: 'warning',
+        icon: 'fa-diagram-project',
+        metrics: { bar: '185 Bar', flow: '120 L/min', pulse: 'Low Ripple' },
+        desc: 'Flexible wire-braided hydraulic pressure hoses with quick-disconnect test points.'
+    }
+];
+
+function initHPUPhotoOverlay() {
+    const container = document.getElementById('pump-3d-container');
+    if (!container) return;
+
+    let photoOverlay = document.getElementById('hpu-photo-overlay');
+    if (!photoOverlay) {
+        photoOverlay = document.createElement('div');
+        photoOverlay.id = 'hpu-photo-overlay';
+        photoOverlay.className = 'hpu-photo-overlay';
+        photoOverlay.style.backgroundImage = 'url("static/hydraulic_power_unit.png")';
+        photoOverlay.style.display = 'none';
+
+        // Render Hotspot Pins
+        hpuHotspots.forEach(spot => {
+            const el = document.createElement('div');
+            el.className = `hpu-hotspot ${spot.type}`;
+            el.style.top = spot.top;
+            el.style.left = spot.left;
+            el.onclick = (e) => showHPUHotspotPopover(spot, e);
+
+            el.innerHTML = `
+                <div class="hpu-hotspot-pulse"></div>
+                <div class="hpu-hotspot-pin"><i class="fa-solid ${spot.icon}"></i></div>
+            `;
+            photoOverlay.appendChild(el);
+        });
+
+        container.appendChild(photoOverlay);
+    }
+}
+
+function showHPUHotspotPopover(spot, e) {
+    e.stopPropagation();
+    let old = document.getElementById('hpu-telemetry-popover');
+    if (old) old.remove();
+
+    const popover = document.createElement('div');
+    popover.id = 'hpu-telemetry-popover';
+    popover.className = 'hpu-telemetry-popover';
+    popover.style.top = spot.top;
+    popover.style.left = spot.left;
+
+    let metricsHTML = '';
+    for (let [k, v] of Object.entries(spot.metrics)) {
+        metricsHTML += `<div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;"><span style="color:var(--text-secondary); text-transform:capitalize;">${k.replace('_', ' ')}:</span><strong style="color:var(--accent);">${v}</strong></div>`;
+    }
+
+    popover.innerHTML = `
+        <div style="display:flex; justify-size:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid var(--card-border); padding-bottom:6px;">
+            <strong style="font-size:12px; color:var(--text-primary);"><i class="fa-solid ${spot.icon}" style="color:var(--accent); margin-right:6px;"></i>${spot.name}</strong>
+            <button onclick="document.getElementById('hpu-telemetry-popover').remove()" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:12px;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div style="margin-bottom:10px;">${metricsHTML}</div>
+        <p style="font-size:10.5px; color:var(--text-secondary); line-height:1.4;">${spot.desc}</p>
+    `;
+
+    document.getElementById('pump-3d-container').appendChild(popover);
+}
+
+// Render Mode Toggle (Solid CAD, Hologram, Thermal Heatmap, Photo Spec, Split Dual Twin)
 function set3DRenderMode(mode) {
     active3DMode = mode;
+    const canvas = document.getElementById('pump-3d-canvas');
+    const photoOverlay = document.getElementById('hpu-photo-overlay');
+
+    // Update active button state styling
+    document.querySelectorAll('.hpu-mode-btn').forEach(btn => {
+        if (btn.getAttribute('data-mode') === mode) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    if (mode === 'photo') {
+        if (canvas) canvas.style.display = 'none';
+        if (photoOverlay) {
+            photoOverlay.style.display = 'block';
+            photoOverlay.style.width = '100%';
+            photoOverlay.style.left = '0';
+        }
+        return;
+    } else if (mode === 'split') {
+        if (canvas) {
+            canvas.style.display = 'block';
+            canvas.style.width = '50%';
+            canvas.style.float = 'left';
+        }
+        if (photoOverlay) {
+            photoOverlay.style.display = 'block';
+            photoOverlay.style.width = '50%';
+            photoOverlay.style.left = '50%';
+        }
+        if (pumpRenderer && pumpCamera) {
+            const container = document.getElementById('pump-3d-container');
+            if (container) {
+                pumpCamera.aspect = (container.clientWidth * 0.5) / container.clientHeight;
+                pumpCamera.updateProjectionMatrix();
+                pumpRenderer.setSize(container.clientWidth * 0.5, container.clientHeight);
+            }
+        }
+        return;
+    } else {
+        if (canvas) {
+            canvas.style.display = 'block';
+            canvas.style.width = '100%';
+        }
+        if (photoOverlay) photoOverlay.style.display = 'none';
+        if (pumpRenderer && pumpCamera) {
+            const container = document.getElementById('pump-3d-container');
+            if (container) {
+                pumpCamera.aspect = container.clientWidth / container.clientHeight;
+                pumpCamera.updateProjectionMatrix();
+                pumpRenderer.setSize(container.clientWidth, container.clientHeight);
+            }
+        }
+    }
+
     if (!pumpGroup) return;
 
     pumpGroup.traverse((child) => {
@@ -432,20 +663,21 @@ function set3DRenderMode(mode) {
                     opacity: 0.6
                 });
             } else if (mode === 'thermal') {
-                const temp = current3DTelemetry.temp || 70;
-                const heatColor = temp > 88 ? 0xf85149 : (temp > 80 ? 0xf5a623 : 0x3fb950);
+                const temp = current3DTelemetry.temp || 74;
+                const isMotor = child === motorAMesh || child === motorBMesh;
+                const heatColor = (isMotor && temp > 76) ? 0xf85149 : (temp > 70 ? 0xf5a623 : 0x3fb950);
                 child.material = new THREE.MeshStandardMaterial({
                     color: heatColor,
                     emissive: heatColor,
-                    emissiveIntensity: 0.4,
+                    emissiveIntensity: 0.45,
                     metalness: 0.4,
                     roughness: 0.4
                 });
             } else {
-                // Restore solid
-                const darkNavyMat = new THREE.MeshStandardMaterial({ color: 0x162842, metalness: 0.8, roughness: 0.3 });
+                // Restore solid HPU colors
+                const hpuBlueMat = new THREE.MeshStandardMaterial({ color: 0x0f52ba, metalness: 0.7, roughness: 0.35 });
                 const steelMat = new THREE.MeshStandardMaterial({ color: 0xc4d1e2, metalness: 0.95, roughness: 0.15 });
-                child.material = (child.geometry.type.includes('Cylinder') && child.scale.x < 1.0) ? steelMat : darkNavyMat;
+                child.material = (child.geometry.type.includes('Cylinder') && child.scale.x < 1.0) ? steelMat : hpuBlueMat;
             }
         }
     });
@@ -462,11 +694,12 @@ function toggle3DRotation() {
 
 // Update 3D Telemetry State from Dashboard
 function update3DModelTelemetry(temp, vib, faultCode) {
-    current3DTelemetry = { temp, vib, fault: faultCode };
+    current3DTelemetry.temp = temp;
+    current3DTelemetry.vib = vib;
+    current3DTelemetry.fault = faultCode;
 
     if (fluidMesh) {
-        // Adjust fluid height based on oil/coolant level
-        const levelPct = current3DTelemetry.oil || 60;
+        const levelPct = current3DTelemetry.oil_level || 82;
         fluidMesh.scale.y = Math.max(0.2, levelPct / 100);
     }
 
@@ -480,6 +713,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         initLanding3DBg();
         initPump3DViewer('pump-3d-canvas', 'pump-3d-container');
-        initPump3DViewer('dash-pump-3d-canvas', 'dash-pump-3d-container');
+        initHPUPhotoOverlay();
     }, 200);
 });
