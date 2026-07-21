@@ -428,13 +428,32 @@ function attachEventListeners() {
 
     document.getElementById('run-diagnostic-btn').addEventListener('click', () => runDiagnostic());
 
-    document.getElementById('live-telemetry-toggle').addEventListener('change', (e) => {
-        if (e.target.checked) {
-            liveTelemetryInterval = setInterval(simulateLiveTelemetry, 2000);
-        } else {
-            clearInterval(liveTelemetryInterval);
-        }
-    });
+    const liveToggle = document.getElementById('live-telemetry-toggle');
+    if (liveToggle) {
+        liveToggle.addEventListener('change', (e) => {
+            if (liveTelemetryInterval) clearInterval(liveTelemetryInterval);
+            if (e.target.checked) {
+                simulateLiveTelemetry(); // Trigger immediate first telemetry tick instantly
+                liveTelemetryInterval = setInterval(simulateLiveTelemetry, 2000);
+                showToast('<i class="fa-solid fa-satellite-dish"></i> Live Telemetry Streaming Active', 'success', 2500);
+            } else {
+                showToast('Live Telemetry Paused', 'warning', 2000);
+            }
+        });
+    }
+
+    // Make the Live Telemetry Stream card clickable to instantly toggle telemetry
+    const chartCard = document.querySelector('.chart-card');
+    if (chartCard) {
+        chartCard.title = 'Click to toggle Live Telemetry Stream';
+        chartCard.addEventListener('click', (e) => {
+            if (e.target.closest('.live-toggle') || e.target.id === 'live-telemetry-toggle') return;
+            if (liveToggle) {
+                liveToggle.checked = !liveToggle.checked;
+                liveToggle.dispatchEvent(new Event('change'));
+            }
+        });
+    }
 
     document.getElementById('send-chat-btn').addEventListener('click', sendChatMessage);
     document.getElementById('chat-input').addEventListener('keypress', (e) => {
