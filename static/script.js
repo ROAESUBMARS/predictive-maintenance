@@ -75,9 +75,9 @@ let contributionsChart;
 let chartData = {
     labels: [],
     datasets: [
-        { label: 'Vibration (g)', borderColor: '#f0883e', data: [], tension: 0.4, yAxisID: 'yVib' },
-        { label: 'Flow Rate (lpm)', borderColor: '#58a6ff', data: [], tension: 0.4, yAxisID: 'yFlow' },
-        { label: 'Oil Level (%)', borderColor: '#3fb950', data: [], tension: 0.4, yAxisID: 'yOil' }
+        { label: 'Vibration (g)', borderColor: '#f0883e', backgroundColor: 'rgba(240, 136, 62, 0.2)', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: '#f0883e', fill: false, data: [], tension: 0.4, yAxisID: 'yVib' },
+        { label: 'Flow Rate (lpm)', borderColor: '#58a6ff', backgroundColor: 'rgba(88, 166, 255, 0.2)', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: '#58a6ff', fill: false, data: [], tension: 0.4, yAxisID: 'yFlow' },
+        { label: 'Oil Level (%)', borderColor: '#3fb950', backgroundColor: 'rgba(63, 185, 80, 0.2)', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: '#3fb950', fill: false, data: [], tension: 0.4, yAxisID: 'yOil' }
     ]
 };
 const MAX_DATA_POINTS = 20;
@@ -270,21 +270,27 @@ function initSharedElements() {
                     position: 'left',
                     title: { display: true, text: 'Vibration (g)', color: '#f0883e' },
                     ticks: { color: '#f0883e' },
-                    grid: { color: '#21262d' }
+                    grid: { color: '#21262d' },
+                    suggestedMin: 0.010,
+                    suggestedMax: 0.060
                 },
                 yFlow: {
                     type: 'linear',
                     position: 'right',
                     title: { display: true, text: 'Flow Rate (lpm)', color: '#58a6ff' },
                     ticks: { color: '#58a6ff' },
-                    grid: { drawOnChartArea: false }
+                    grid: { drawOnChartArea: false },
+                    suggestedMin: 200,
+                    suggestedMax: 400
                 },
                 yOil: {
                     type: 'linear',
                     position: 'right',
                     title: { display: true, text: 'Oil Level (%)', color: '#3fb950' },
                     ticks: { color: '#3fb950' },
-                    grid: { drawOnChartArea: false }
+                    grid: { drawOnChartArea: false },
+                    suggestedMin: 0,
+                    suggestedMax: 100
                 }
             },
             animation: { duration: 0 }
