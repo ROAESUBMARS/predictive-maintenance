@@ -75,9 +75,9 @@ let contributionsChart;
 let chartData = {
     labels: [],
     datasets: [
-        { label: 'Vibration (g)', borderColor: '#f0883e', backgroundColor: 'rgba(240, 136, 62, 0.2)', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: '#f0883e', fill: false, data: [], tension: 0.4, yAxisID: 'yVib' },
-        { label: 'Flow Rate (lpm)', borderColor: '#58a6ff', backgroundColor: 'rgba(88, 166, 255, 0.2)', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: '#58a6ff', fill: false, data: [], tension: 0.4, yAxisID: 'yFlow' },
-        { label: 'Oil Level (%)', borderColor: '#3fb950', backgroundColor: 'rgba(63, 185, 80, 0.2)', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: '#3fb950', fill: false, data: [], tension: 0.4, yAxisID: 'yOil' }
+        { label: 'Vibration (g)', borderColor: '#ff7b00', backgroundColor: 'rgba(255, 123, 0, 0.15)', borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#ff7b00', fill: false, data: [], tension: 0.4, yAxisID: 'yVib' },
+        { label: 'Flow Rate (lpm)', borderColor: '#00bfff', backgroundColor: 'rgba(0, 191, 255, 0.15)', borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#00bfff', fill: false, data: [], tension: 0.4, yAxisID: 'yFlow' },
+        { label: 'Oil Level (%)', borderColor: '#00ff66', backgroundColor: 'rgba(0, 255, 102, 0.15)', borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#00ff66', fill: false, data: [], tension: 0.4, yAxisID: 'yOil' }
     ]
 };
 const MAX_DATA_POINTS = 20;
@@ -251,10 +251,11 @@ function initSharedElements() {
     const now = new Date();
     for(let i=MAX_DATA_POINTS; i>0; i--) {
         const t = new Date(now.getTime() - i * 1000);
+        const k = i * 0.4;
         chartData.labels.push(t.toLocaleTimeString([], {hour12: false, second: '2-digit'}));
-        chartData.datasets[0].data.push(0.020);
-        chartData.datasets[1].data.push(300);
-        chartData.datasets[2].data.push(60);
+        chartData.datasets[0].data.push(parseFloat((0.024 + Math.sin(k) * 0.008).toFixed(3)));
+        chartData.datasets[1].data.push(parseFloat((310 + Math.cos(k * 0.8) * 35).toFixed(0)));
+        chartData.datasets[2].data.push(parseFloat((62 + Math.sin(k * 0.5) * 12).toFixed(0)));
     }
     telemetryChart = new Chart(ctx, {
         type: 'line',
@@ -268,32 +269,32 @@ function initSharedElements() {
                 yVib: {
                     type: 'linear',
                     position: 'left',
-                    title: { display: true, text: 'Vibration (g)', color: '#f0883e' },
-                    ticks: { color: '#f0883e' },
+                    title: { display: true, text: 'Vibration (g)', color: '#ff7b00' },
+                    ticks: { color: '#ff7b00' },
                     grid: { color: '#21262d' },
-                    suggestedMin: 0.010,
-                    suggestedMax: 0.060
+                    suggestedMin: 0.000,
+                    suggestedMax: 0.080
                 },
                 yFlow: {
                     type: 'linear',
                     position: 'right',
-                    title: { display: true, text: 'Flow Rate (lpm)', color: '#58a6ff' },
-                    ticks: { color: '#58a6ff' },
+                    title: { display: true, text: 'Flow Rate (lpm)', color: '#00bfff' },
+                    ticks: { color: '#00bfff' },
                     grid: { drawOnChartArea: false },
-                    suggestedMin: 200,
-                    suggestedMax: 400
+                    suggestedMin: 100,
+                    suggestedMax: 500
                 },
                 yOil: {
                     type: 'linear',
                     position: 'right',
-                    title: { display: true, text: 'Oil Level (%)', color: '#3fb950' },
-                    ticks: { color: '#3fb950' },
+                    title: { display: true, text: 'Oil Level (%)', color: '#00ff66' },
+                    ticks: { color: '#00ff66' },
                     grid: { drawOnChartArea: false },
                     suggestedMin: 0,
-                    suggestedMax: 100
+                    suggestedMax: 120
                 }
             },
-            animation: { duration: 0 }
+            animation: { duration: 400, easing: 'easeOutQuad' }
         }
     });
 
@@ -1238,58 +1239,51 @@ function renderTechnicianView(ai, isOptimal) {
     }
 }
 
+let telemetryTickCounter = 0;
+
 function simulateLiveTelemetry() {
     const tempSlider = document.getElementById('temp-slider');
     if (!tempSlider) return;
+
+    telemetryTickCounter++;
+    const tick = telemetryTickCounter * 0.45;
 
     // 3.5% chance to trigger a random operational anomaly if currently nominal
     if (!activeSimulationAnomaly && Math.random() < 0.035) {
         const anomalies = ['overheating', 'high_vibration', 'pressure_failure', 'low_oil', 'coolant_leak'];
         activeSimulationAnomaly = anomalies[Math.floor(Math.random() * anomalies.length)];
-        console.log(`[Simulation] Anomaly triggered: ${activeSimulationAnomaly}`);
-        
-        // Update the preset selector UI to reflect the drifting state
         const presetSelect = document.getElementById('preset-select');
         if (presetSelect) presetSelect.value = activeSimulationAnomaly;
     }
 
-    let temp, pres, vib, flow, oil, rpm;
+    // Dynamic operational wave oscillations
+    let vibVal = 0.024 + Math.sin(tick) * 0.012 + (Math.random() * 0.006 - 0.003);
+    let flowVal = 310 + Math.cos(tick * 0.8) * 35 + (Math.random() * 12 - 6);
+    let oilVal = 62 + Math.sin(tick * 0.5) * 14 + (Math.random() * 4 - 2);
+    let tempVal = 70 + Math.sin(tick * 0.3) * 6 + (Math.random() * 2 - 1);
+    let presVal = 100 + Math.cos(tick * 0.4) * 8 + (Math.random() * 3 - 1.5);
+    let rpmVal = 1500 + Math.sin(tick * 0.6) * 45 + (Math.random() * 20 - 10);
 
     if (activeSimulationAnomaly) {
         const target = PRESETS[activeSimulationAnomaly];
         if (target) {
-            // Gradual pull towards anomaly parameters
-            temp = parseFloat(tempSlider.value) + (target.temp - parseFloat(tempSlider.value)) * 0.15 + (Math.random() * 2 - 1.0);
-            pres = parseFloat(document.getElementById('pres-slider').value) + (target.pres - parseFloat(document.getElementById('pres-slider').value)) * 0.15 + (Math.random() * 4 - 2.0);
-            vib = parseFloat(document.getElementById('vib-slider').value) + (target.vib - parseFloat(document.getElementById('vib-slider').value)) * 0.15 + (Math.random() * 0.003 - 0.0015);
-            flow = parseFloat(document.getElementById('flow-slider').value) + (target.flow - parseFloat(document.getElementById('flow-slider').value)) * 0.15 + (Math.random() * 10 - 5.0);
-            oil = parseFloat(document.getElementById('oil-slider').value) + (target.oil - parseFloat(document.getElementById('oil-slider').value)) * 0.15 + (Math.random() * 2 - 1.0);
-            rpm = parseFloat(document.getElementById('rpm-slider').value) + (target.rpm - parseFloat(document.getElementById('rpm-slider').value)) * 0.15 + (Math.random() * 40 - 20.0);
-            
+            tempVal += (target.temp - 70) * 0.5;
+            presVal += (target.pres - 100) * 0.5;
+            vibVal += (target.vib - 0.020) * 0.7;
+            flowVal += (target.flow - 300) * 0.5;
+            oilVal += (target.oil - 60) * 0.5;
             if (target.leak === 1 && Math.random() < 0.4) {
                 document.getElementById('leak-select').value = "1";
             }
         }
-    } else {
-        // Slight natural drift around standard nominal baselines
-        temp = parseFloat(tempSlider.value) + (70 - parseFloat(tempSlider.value)) * 0.05 + (Math.random() * 2 - 1.0);
-        pres = parseFloat(document.getElementById('pres-slider').value) + (100 - parseFloat(document.getElementById('pres-slider').value)) * 0.05 + (Math.random() * 4 - 2.0);
-        vib = parseFloat(document.getElementById('vib-slider').value) + (0.02 - parseFloat(document.getElementById('vib-slider').value)) * 0.05 + (Math.random() * 0.002 - 0.001);
-        flow = parseFloat(document.getElementById('flow-slider').value) + (300 - parseFloat(document.getElementById('flow-slider').value)) * 0.05 + (Math.random() * 6 - 3.0);
-        oil = parseFloat(document.getElementById('oil-slider').value) + (60 - parseFloat(document.getElementById('oil-slider').value)) * 0.05 + (Math.random() * 1.5 - 0.75);
-        rpm = parseFloat(document.getElementById('rpm-slider').value) + (1500 - parseFloat(document.getElementById('rpm-slider').value)) * 0.05 + (Math.random() * 30 - 15.0);
-        
-        if (document.getElementById('leak-select').value === "1" && Math.random() < 0.2) {
-            document.getElementById('leak-select').value = "0";
-        }
     }
 
-    setSliderValue('temp', Math.min(Math.max(temp, 20), 150).toFixed(1));
-    setSliderValue('pres', Math.min(Math.max(pres, 0), 200).toFixed(1));
-    setSliderValue('vib', Math.min(Math.max(vib, 0), 0.1).toFixed(3));
-    setSliderValue('flow', Math.min(Math.max(flow, 0), 1000).toFixed(0));
-    setSliderValue('oil', Math.min(Math.max(oil, 0), 100).toFixed(0));
-    setSliderValue('rpm', Math.min(Math.max(rpm, 0), 5000).toFixed(0));
+    setSliderValue('temp', Math.min(Math.max(tempVal, 20), 150).toFixed(1));
+    setSliderValue('pres', Math.min(Math.max(presVal, 0), 200).toFixed(1));
+    setSliderValue('vib', Math.min(Math.max(vibVal, 0.005), 0.095).toFixed(3));
+    setSliderValue('flow', Math.min(Math.max(flowVal, 50), 850).toFixed(0));
+    setSliderValue('oil', Math.min(Math.max(oilVal, 5), 100).toFixed(0));
+    setSliderValue('rpm', Math.min(Math.max(rpmVal, 500), 4500).toFixed(0));
 
     updateRawDataTable();
     runDiagnostic(true); // silent=true: skip animation and spinner during live telemetry
