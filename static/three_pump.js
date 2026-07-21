@@ -475,7 +475,7 @@ const hpuHotspots = [
         key: 'motor_a',
         name: 'Drive Motor A (Primary)',
         top: '68%',
-        left: '45%',
+        left: '48%',
         type: 'warning',
         icon: 'fa-bolt',
         metrics: { rpm: '1,750 RPM', vib: '0.042 in/s (ALERT)', temp: '78.5 °C', load: '88%' },
@@ -485,7 +485,7 @@ const hpuHotspots = [
         key: 'motor_b',
         name: 'Drive Motor B (Secondary)',
         top: '62%',
-        left: '68%',
+        left: '72%',
         type: 'success',
         icon: 'fa-microchip',
         metrics: { rpm: '1,748 RPM', vib: '0.018 in/s (NOMINAL)', temp: '64.2 °C', load: '45%' },
@@ -494,8 +494,8 @@ const hpuHotspots = [
     {
         key: 'reservoir',
         name: 'Hydraulic Oil Reservoir Skid',
-        top: '48%',
-        left: '22%',
+        top: '52%',
+        left: '26%',
         type: 'success',
         icon: 'fa-oil-can',
         metrics: { level: '82% (Nominal)', temp: '54.0 °C', ISO_clean: 'ISO 16/14/11', pressure: '185 Bar' },
@@ -504,8 +504,8 @@ const hpuHotspots = [
     {
         key: 'panel',
         name: 'PLC & Electrical Control Cabinet',
-        top: '32%',
-        left: '86%',
+        top: '36%',
+        left: '84%',
         type: 'success',
         icon: 'fa-server',
         metrics: { voltage: '415 V (3-Phase)', current: '64 A', plc_status: 'ONLINE', bus: 'Modbus TCP' },
@@ -514,8 +514,8 @@ const hpuHotspots = [
     {
         key: 'cooler',
         name: 'Air Heat Exchanger & Fan Module',
-        top: '12%',
-        left: '42%',
+        top: '18%',
+        left: '44%',
         type: 'success',
         icon: 'fa-fan',
         metrics: { air_flow: '4,200 m³/h', fan_rpm: '1,450 RPM', delta_t: '-12.5 °C' },
@@ -524,8 +524,8 @@ const hpuHotspots = [
     {
         key: 'manifold',
         name: 'High-Pressure Hoses & Manifold',
-        top: '30%',
-        left: '26%',
+        top: '32%',
+        left: '32%',
         type: 'warning',
         icon: 'fa-diagram-project',
         metrics: { bar: '185 Bar', flow: '120 L/min', pulse: 'Low Ripple' },
@@ -572,8 +572,28 @@ function showHPUHotspotPopover(spot, e) {
     const popover = document.createElement('div');
     popover.id = 'hpu-telemetry-popover';
     popover.className = 'hpu-telemetry-popover';
-    popover.style.top = spot.top;
+
+    const topNum = parseFloat(spot.top);
+    const leftNum = parseFloat(spot.left);
+
+    // Smart Y alignment: open downwards if near top (<45%), upwards if near bottom
+    let translateY = '-105%';
+    let posY = spot.top;
+    if (topNum < 45) {
+        translateY = '20px';
+    }
+
+    // Smart X alignment: shift right if near left edge, shift left if near right edge
+    let translateX = '-50%';
+    if (leftNum < 35) {
+        translateX = '0%';
+    } else if (leftNum > 65) {
+        translateX = '-100%';
+    }
+
+    popover.style.top = posY;
     popover.style.left = spot.left;
+    popover.style.transform = `translate(${translateX}, ${translateY})`;
 
     let metricsHTML = '';
     for (let [k, v] of Object.entries(spot.metrics)) {
@@ -581,9 +601,9 @@ function showHPUHotspotPopover(spot, e) {
     }
 
     popover.innerHTML = `
-        <div style="display:flex; justify-size:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid var(--card-border); padding-bottom:6px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid var(--card-border); padding-bottom:6px;">
             <strong style="font-size:12px; color:var(--text-primary);"><i class="fa-solid ${spot.icon}" style="color:var(--accent); margin-right:6px;"></i>${spot.name}</strong>
-            <button onclick="document.getElementById('hpu-telemetry-popover').remove()" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:12px;"><i class="fa-solid fa-xmark"></i></button>
+            <button onclick="document.getElementById('hpu-telemetry-popover').remove()" style="background:none; border:none; color:var(--text-secondary); cursor:pointer; font-size:14px; padding:2px 6px;"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div style="margin-bottom:10px;">${metricsHTML}</div>
         <p style="font-size:10.5px; color:var(--text-secondary); line-height:1.4;">${spot.desc}</p>
