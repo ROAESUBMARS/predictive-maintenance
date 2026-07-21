@@ -441,7 +441,7 @@ function attachEventListeners() {
             if (liveTelemetryInterval) clearInterval(liveTelemetryInterval);
             if (e.target.checked) {
                 simulateLiveTelemetry(); // Trigger immediate first telemetry tick instantly
-                liveTelemetryInterval = setInterval(simulateLiveTelemetry, 2000);
+                liveTelemetryInterval = setInterval(simulateLiveTelemetry, 1000);
                 showToast('<i class="fa-solid fa-satellite-dish"></i> Live Telemetry Streaming Active', 'success', 2500);
             } else {
                 showToast('Live Telemetry Paused', 'warning', 2000);
@@ -1286,7 +1286,15 @@ function simulateLiveTelemetry() {
     setSliderValue('rpm', Math.min(Math.max(rpmVal, 500), 4500).toFixed(0));
 
     updateRawDataTable();
-    runDiagnostic(true); // silent=true: skip animation and spinner during live telemetry
+    
+    // Direct, unblocked chart tick on every interval (zero dependency on API network state)
+    updateChartPoint(vibVal, flowVal, oilVal);
+
+    if (typeof update3DModelTelemetry === 'function') {
+        update3DModelTelemetry(tempVal, vibVal, activeSimulationAnomaly ? 1 : 0);
+    }
+
+    runDiagnostic(true); // background silent diagnostic evaluation
 }
 
 function updateChartPoint(vib, flow, oil) {
