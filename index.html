@@ -113,10 +113,17 @@
                     </div>
                 </div>
                 
-                <div id="pump-3d-container" style="width: 100%; height: 320px; position: relative; border-radius: 12px; background: radial-gradient(circle at center, rgba(15, 39, 68, 0.4) 0%, rgba(13, 17, 23, 0.9) 100%); border: 1px solid var(--card-border);">
+                <div id="pump-3d-container" style="width: 100%; height: 360px; position: relative; border-radius: 12px; background: radial-gradient(circle at center, rgba(15, 39, 68, 0.4) 0%, rgba(13, 17, 23, 0.95) 100%), repeating-linear-gradient(0deg, rgba(88,166,255,0.04) 0px, rgba(88,166,255,0.04) 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, rgba(88,166,255,0.04) 0px, rgba(88,166,255,0.04) 1px, transparent 1px, transparent 20px); border: 1px solid var(--accent);">
+                    <!-- Technical Blueprint Callout Header Overlay -->
+                    <div style="position: absolute; top: 14px; right: 16px; background: rgba(248, 81, 73, 0.15); border: 1px solid var(--danger); border-radius: 6px; padding: 8px 14px; color: var(--danger); font-size: 11px; font-weight: 700; letter-spacing: 0.5px; z-index: 10; backdrop-filter: blur(6px);">
+                        <i class="fa-solid fa-triangle-exclamation"></i> CRITICAL ALERT: VIBRATION ANOMALY DETECTED — SCHEDULE INSPECTION
+                    </div>
+
                     <canvas id="pump-3d-canvas" style="width: 100%; height: 100%; cursor: grab;"></canvas>
-                    <div style="position: absolute; bottom: 12px; left: 16px; font-size: 11px; color: var(--text-secondary); background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 6px; backdrop-filter: blur(4px);">
-                        <i class="fa-solid fa-circle-info" style="color: var(--accent);"></i> Hotspots: Motor Bearings · Volute Chamber · Shaft Seal · Discharge Valve
+                    
+                    <!-- Bottom HUD Bar -->
+                    <div style="position: absolute; bottom: 12px; left: 16px; font-size: 11px; color: var(--text-secondary); background: rgba(13, 17, 23, 0.85); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--card-border); backdrop-filter: blur(8px); z-index: 10;">
+                        <i class="fa-solid fa-diagram-project" style="color: var(--accent);"></i> Blueprint Components: Square Flange · Keyway Shaft · Intermeshing Cutaway Gears · Fluid Tank & Solenoid
                     </div>
                 </div>
             </div>

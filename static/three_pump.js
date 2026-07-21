@@ -1,10 +1,10 @@
 // ═════════════════════════════════════════════════════════════════════════════
 // THREE.JS 3D DIGITAL TWIN & LANDING PAGE VISUALIZER
-// NMU AI Predictive Maintenance System
+// NMU AI Predictive Maintenance System — Cutaway Hydraulic Gear Pump Model
 // ═════════════════════════════════════════════════════════════════════════════
 
 let landingBgScene, landingBgCamera, landingBgRenderer, landingParticles;
-let pumpScene, pumpCamera, pumpRenderer, pumpGroup, impellerGroup;
+let pumpScene, pumpCamera, pumpRenderer, pumpGroup, driveGearMesh, drivenGearMesh, fluidMesh;
 let active3DMode = 'solid'; // 'solid', 'hologram', 'thermal'
 let current3DTelemetry = { temp: 74, vib: 0.024, fault: 0 };
 let isAutoRotating = true;
@@ -22,7 +22,7 @@ function initLanding3DBg() {
     landingBgRenderer.setSize(window.innerWidth, window.innerHeight);
     landingBgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    const particleCount = 750;
+    const particleCount = 800;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const colors = new Float32Array(particleCount * 3);
@@ -45,10 +45,10 @@ function initLanding3DBg() {
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
-        size: 3.5,
+        size: 3.2,
         vertexColors: true,
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.55,
         blending: THREE.AdditiveBlending
     });
 
@@ -57,8 +57,8 @@ function initLanding3DBg() {
 
     let mouseX = 0, mouseY = 0;
     window.addEventListener('mousemove', (e) => {
-        mouseX = (e.clientX - window.innerWidth / 2) * 0.12;
-        mouseY = (e.clientY - window.innerHeight / 2) * 0.12;
+        mouseX = (e.clientX - window.innerWidth / 2) * 0.1;
+        mouseY = (e.clientY - window.innerHeight / 2) * 0.1;
     });
 
     window.addEventListener('resize', () => {
@@ -82,141 +82,241 @@ function initLanding3DBg() {
     animateBg();
 }
 
-// Build 3D Hydraulic Pump Procedural Geometry
+// Build 3D Technical Cutaway Gear Pump Procedural Model (Matching Technical Blueprint Image)
 function build3DPumpModel() {
     pumpGroup = new THREE.Group();
 
-    // Base Materials
-    const bodyMat = new THREE.MeshStandardMaterial({
-        color: 0x1f293d,
-        metalness: 0.85,
-        roughness: 0.25
-    });
-
-    const chromeMat = new THREE.MeshStandardMaterial({
-        color: 0xd0d7de,
-        metalness: 0.95,
-        roughness: 0.1
-    });
-
-    const brassMat = new THREE.MeshStandardMaterial({
-        color: 0xd4a017,
+    // ── Color Palette & Materials ──
+    const darkNavyMat = new THREE.MeshStandardMaterial({
+        color: 0x162842,
         metalness: 0.8,
         roughness: 0.3
     });
 
-    const glowBlueMat = new THREE.MeshStandardMaterial({
-        color: 0x58a6ff,
-        emissive: 0x58a6ff,
-        emissiveIntensity: 0.5,
-        metalness: 0.5,
-        roughness: 0.5
+    const steelMat = new THREE.MeshStandardMaterial({
+        color: 0xc4d1e2,
+        metalness: 0.95,
+        roughness: 0.15
     });
 
-    // 1. Motor Main Body (Cylinder)
-    const motorGeo = new THREE.CylinderGeometry(2.0, 2.0, 5.0, 32);
-    const motorMesh = new THREE.Mesh(motorGeo, bodyMat);
-    motorMesh.position.x = -2.5;
-    motorMesh.rotation.z = Math.PI / 2;
-    pumpGroup.add(motorMesh);
+    const brassMat = new THREE.MeshStandardMaterial({
+        color: 0xd4a017,
+        metalness: 0.85,
+        roughness: 0.25
+    });
 
-    // Motor Cooling Fins (Array of Torus rings)
-    for (let i = -2; i <= 2; i += 0.5) {
-        const finGeo = new THREE.TorusGeometry(2.1, 0.07, 16, 32);
-        const finMesh = new THREE.Mesh(finGeo, chromeMat);
-        finMesh.position.x = -2.5 + i;
-        finMesh.rotation.y = Math.PI / 2;
-        pumpGroup.add(finMesh);
+    const ghostWireMat = new THREE.MeshBasicMaterial({
+        color: 0x58a6ff,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.4
+    });
+
+    const glassMat = new THREE.MeshPhysicalMaterial({
+        color: 0x58a6ff,
+        transparent: true,
+        opacity: 0.35,
+        roughness: 0.1,
+        transmission: 0.9,
+        thickness: 0.5
+    });
+
+    const fluidMat = new THREE.MeshStandardMaterial({
+        color: 0x0969da,
+        transparent: true,
+        opacity: 0.7,
+        roughness: 0.2
+    });
+
+    // 1. FRONT SQUARE MOUNTING FLANGE (WITH 4 CORNER BOLT HOLES)
+    const flangeShape = new THREE.Shape();
+    const w = 2.4, h = 2.4, r = 0.3;
+    flangeShape.moveTo(-w + r, -h);
+    flangeShape.lineTo(w - r, -h);
+    flangeShape.quadraticCurveTo(w, -h, w, -h + r);
+    flangeShape.lineTo(w, h - r);
+    flangeShape.quadraticCurveTo(w, h, w - r, h);
+    flangeShape.lineTo(-w + r, h);
+    flangeShape.quadraticCurveTo(-w, h, -w, h - r);
+    flangeShape.lineTo(-w, -h + r);
+    flangeShape.quadraticCurveTo(-w, -h, -w + r, -h);
+
+    const extrudeSettings = { depth: 0.4, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.08, bevelThickness: 0.08 };
+    const flangeGeo = new THREE.ExtrudeGeometry(flangeShape, extrudeSettings);
+    const flangeMesh = new THREE.Mesh(flangeGeo, darkNavyMat);
+    flangeMesh.position.set(0, 0, 3.2);
+    pumpGroup.add(flangeMesh);
+
+    // 4 Corner Bolt Holes
+    const holePos = [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]];
+    holePos.forEach(([hx, hy]) => {
+        const holeGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.6, 16);
+        const holeMesh = new THREE.Mesh(holeGeo, steelMat);
+        holeMesh.position.set(hx, hy, 3.4);
+        holeMesh.rotation.x = Math.PI / 2;
+        pumpGroup.add(holeMesh);
+    });
+
+    // Concentric Circular Hub Rings on Front Flange
+    for (let rVal of [1.6, 1.1]) {
+        const ringGeo = new THREE.TorusGeometry(rVal, 0.08, 16, 32);
+        const ringMesh = new THREE.Mesh(ringGeo, steelMat);
+        ringMesh.position.set(0, 0, 3.65);
+        pumpGroup.add(ringMesh);
     }
 
-    // Terminal Conduit Box
-    const boxGeo = new THREE.BoxGeometry(1.4, 0.8, 1.4);
-    const boxMesh = new THREE.Mesh(boxGeo, bodyMat);
-    boxMesh.position.set(-2.5, 2.2, 0);
-    pumpGroup.add(boxMesh);
+    // 2. DRIVE SHAFT WITH KEYWAY SLOT
+    const shaftGeo = new THREE.CylinderGeometry(0.55, 0.55, 2.6, 32);
+    const shaftMesh = new THREE.Mesh(shaftGeo, steelMat);
+    shaftMesh.position.set(0, 0, 4.5);
+    shaftMesh.rotation.x = Math.PI / 2;
+    pumpGroup.add(shaftMesh);
 
-    // 2. Shaft Housing & Coupling
-    const shaftHousingGeo = new THREE.CylinderGeometry(1.3, 1.7, 1.8, 32);
-    const shaftHousingMesh = new THREE.Mesh(shaftHousingGeo, chromeMat);
-    shaftHousingMesh.position.x = 1.0;
-    shaftHousingMesh.rotation.z = Math.PI / 2;
-    pumpGroup.add(shaftHousingMesh);
+    // Keyway Drive Slot
+    const keywayGeo = new THREE.BoxGeometry(0.18, 0.2, 1.0);
+    const keywayMesh = new THREE.Mesh(keywayGeo, brassMat);
+    keywayMesh.position.set(0, 0.55, 4.5);
+    pumpGroup.add(keywayMesh);
 
-    // 3. Volute Casing (Main Pump Housing)
-    const voluteGeo = new THREE.TorusGeometry(2.0, 1.1, 24, 32);
-    const voluteMesh = new THREE.Mesh(voluteGeo, bodyMat);
-    voluteMesh.position.x = 2.8;
-    voluteMesh.rotation.y = Math.PI / 2;
-    pumpGroup.add(voluteMesh);
+    // 3. CUTAWAY PUMP HOUSING (3/4 SOLID, 1/4 CUTAWAY EXPOSING GEARS)
+    const housingGeo = new THREE.CylinderGeometry(2.2, 2.2, 5.2, 32, 1, false, 0, Math.PI * 1.45);
+    const housingMesh = new THREE.Mesh(housingGeo, darkNavyMat);
+    housingMesh.position.set(0, 0, 0.6);
+    housingMesh.rotation.x = Math.PI / 2;
+    housingMesh.rotation.y = Math.PI * 0.15;
+    pumpGroup.add(housingMesh);
 
-    // Volute Front Cover Plate
-    const capGeo = new THREE.CylinderGeometry(2.0, 2.0, 0.5, 32);
-    const capMesh = new THREE.Mesh(capGeo, brassMat);
-    capMesh.position.x = 3.7;
-    capMesh.rotation.z = Math.PI / 2;
-    pumpGroup.add(capMesh);
+    // Ghosted Wireframe Casing (matching dotted blueprint lines in image)
+    const ghostGeo = new THREE.CylinderGeometry(2.22, 2.22, 5.22, 24);
+    const ghostMesh = new THREE.Mesh(ghostGeo, ghostWireMat);
+    ghostMesh.position.set(0, 0, 0.6);
+    ghostMesh.rotation.x = Math.PI / 2;
+    pumpGroup.add(ghostMesh);
 
-    // 4. Suction Pipe (Inlet Manifold)
-    const suctionGeo = new THREE.CylinderGeometry(0.9, 0.9, 2.0, 24);
-    const suctionMesh = new THREE.Mesh(suctionGeo, chromeMat);
-    suctionMesh.position.set(4.6, 0, 0);
-    suctionMesh.rotation.z = Math.PI / 2;
-    pumpGroup.add(suctionMesh);
+    // Rear Mounting Flange Plate
+    const rearFlangeMesh = new THREE.Mesh(flangeGeo, darkNavyMat);
+    rearFlangeMesh.position.set(0, 0, -2.2);
+    pumpGroup.add(rearFlangeMesh);
 
-    // Suction Flange Ring
-    const flange1Geo = new THREE.TorusGeometry(1.1, 0.15, 16, 24);
-    const flange1Mesh = new THREE.Mesh(flange1Geo, brassMat);
-    flange1Mesh.position.set(5.4, 0, 0);
-    flange1Mesh.rotation.y = Math.PI / 2;
-    pumpGroup.add(flange1Mesh);
+    // Side Mounting Bracket Feet
+    const footGeo = new THREE.BoxGeometry(1.0, 0.5, 1.6);
+    const footLeft = new THREE.Mesh(footGeo, darkNavyMat);
+    footLeft.position.set(-1.8, -2.1, 0.6);
+    pumpGroup.add(footLeft);
 
-    // 5. Discharge Pipe (Top Vertical Outlet)
-    const dischargeGeo = new THREE.CylinderGeometry(0.8, 0.8, 2.2, 24);
-    const dischargeMesh = new THREE.Mesh(dischargeGeo, chromeMat);
-    dischargeMesh.position.set(2.8, 2.2, 0);
-    pumpGroup.add(dischargeMesh);
+    // Side Suction Port (Inlet Opening)
+    const portGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.8, 24);
+    const portMesh = new THREE.Mesh(portGeo, steelMat);
+    portMesh.position.set(-2.0, 0, 1.2);
+    portMesh.rotation.z = Math.PI / 2;
+    pumpGroup.add(portMesh);
 
-    // Discharge Flange Ring
-    const flange2Geo = new THREE.TorusGeometry(1.0, 0.15, 16, 24);
-    const flange2Mesh = new THREE.Mesh(flange2Geo, brassMat);
-    flange2Mesh.position.set(2.8, 3.2, 0);
-    flange2Mesh.rotation.x = Math.PI / 2;
-    pumpGroup.add(flange2Mesh);
+    // 4. INTERNAL INTERMESHING PRECISION GEARS (VISIBLE THROUGH CUTAWAY)
+    function createGear(radius, teeth, depth) {
+        const gearGroup = new THREE.Group();
+        const coreGeo = new THREE.CylinderGeometry(radius, radius, depth, 32);
+        const coreMesh = new THREE.Mesh(coreGeo, steelMat);
+        coreMesh.rotation.x = Math.PI / 2;
+        gearGroup.add(coreMesh);
 
-    // 6. Heavy Duty Steel Baseplate
-    const baseGeo = new THREE.BoxGeometry(9.8, 0.4, 4.6);
-    const baseMesh = new THREE.Mesh(baseGeo, bodyMat);
-    baseMesh.position.set(0.5, -2.4, 0);
-    pumpGroup.add(baseMesh);
-
-    // 7. Rotating Internal Impeller
-    impellerGroup = new THREE.Group();
-    for (let b = 0; b < 6; b++) {
-        const bladeGeo = new THREE.BoxGeometry(0.18, 1.4, 0.35);
-        const bladeMesh = new THREE.Mesh(bladeGeo, glowBlueMat);
-        bladeMesh.rotation.x = (b * Math.PI) / 3;
-        bladeMesh.position.z = Math.sin((b * Math.PI) / 3) * 0.7;
-        bladeMesh.position.y = Math.cos((b * Math.PI) / 3) * 0.7;
-        impellerGroup.add(bladeMesh);
+        for (let i = 0; i < teeth; i++) {
+            const angle = (i / teeth) * Math.PI * 2;
+            const toothGeo = new THREE.BoxGeometry(0.18, 0.35, depth);
+            const toothMesh = new THREE.Mesh(toothGeo, brassMat);
+            toothMesh.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, 0);
+            toothMesh.rotation.z = angle;
+            gearGroup.add(toothMesh);
+        }
+        return gearGroup;
     }
-    impellerGroup.position.set(2.8, 0, 0);
-    pumpGroup.add(impellerGroup);
 
-    // 8. Glowing Telemetry Nodes (Hotspots)
+    driveGearMesh = createGear(0.9, 14, 1.4);
+    driveGearMesh.position.set(0, 0.5, 0.6);
+    pumpGroup.add(driveGearMesh);
+
+    drivenGearMesh = createGear(0.9, 14, 1.4);
+    drivenGearMesh.position.set(0, -0.6, 0.6);
+    pumpGroup.add(drivenGearMesh);
+
+    // Inner Shaft connecting drive gear
+    const innerShaftGeo = new THREE.CylinderGeometry(0.35, 0.35, 4.5, 24);
+    const innerShaftMesh = new THREE.Mesh(innerShaftGeo, steelMat);
+    innerShaftMesh.position.set(0, 0.5, 0.8);
+    innerShaftMesh.rotation.x = Math.PI / 2;
+    pumpGroup.add(innerShaftMesh);
+
+    // 5. FLUID RESERVOIR TANK & SOLENOID ASSEMBLY (LEFT SIDE)
+    const tankGroup = new THREE.Group();
+
+    // Outer Glass Tank
+    const tankGeo = new THREE.BoxGeometry(2.6, 1.8, 3.2);
+    const tankMesh = new THREE.Mesh(tankGeo, glassMat);
+    tankGroup.add(tankMesh);
+
+    // Wireframe Tank Outline
+    const tankWire = new THREE.Mesh(tankGeo, ghostWireMat);
+    tankGroup.add(tankWire);
+
+    // Inner Fluid Level
+    const fluidGeo = new THREE.BoxGeometry(2.5, 1.1, 3.1);
+    fluidMesh = new THREE.Mesh(fluidGeo, fluidMat);
+    fluidMesh.position.set(0, -0.3, 0);
+    tankGroup.add(fluidMesh);
+
+    // Vertical Dip Tube inside tank
+    const tubeGeo = new THREE.CylinderGeometry(0.18, 0.18, 1.6, 16);
+    const tubeMesh = new THREE.Mesh(tubeGeo, steelMat);
+    tubeMesh.position.set(-0.4, 0.1, 0);
+    tankGroup.add(tubeMesh);
+
+    // Solenoid Control Valve mounted on top of tank
+    const solenoidGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 24);
+    const solenoidMesh = new THREE.Mesh(solenoidGeo, darkNavyMat);
+    solenoidMesh.position.set(-0.4, 1.4, 0);
+    tankGroup.add(solenoidMesh);
+
+    const capGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.2, 24);
+    const capMesh = new THREE.Mesh(capGeo, steelMat);
+    capMesh.position.set(-0.4, 2.1, 0);
+    tankGroup.add(capMesh);
+
+    // Fluid Hose connecting Tank to Pump Inlet Port
+    const hosePoints = [
+        new THREE.Vector3(-0.4, 1.4, 0),
+        new THREE.Vector3(-2.4, 1.4, 0),
+        new THREE.Vector3(-3.8, 0, 1.2)
+    ];
+    const curve = new THREE.CatmullRomCurve3(hosePoints);
+    const hoseGeo = new THREE.TubeGeometry(curve, 20, 0.14, 8, false);
+    const hoseMesh = new THREE.Mesh(hoseGeo, steelMat);
+    tankGroup.add(hoseMesh);
+
+    tankGroup.position.set(-5.2, -1.0, 0.6);
+    pumpGroup.add(tankGroup);
+
+    // 6. TELEMETRY HOTSPOT CALLOUT NODES (MATCHING BLUEPRINT IMAGE)
     const nodesData = [
-        { name: 'Motor Bearings', pos: [-2.5, 2.4, 0], color: 0x58a6ff },
-        { name: 'Volute Chamber', pos: [2.8, 0, 2.1], color: 0x3fb950 },
-        { name: 'Discharge Valve', pos: [2.8, 3.4, 0], color: 0x58a6ff },
-        { name: 'Mechanical Seal', pos: [1.0, 0, 1.4], color: 0xf5a623 }
+        { name: 'Drive Shaft Keyway', pos: [0, 0.6, 4.6], color: 0x58a6ff },
+        { name: 'Internal Gear Mesh (Vibration Target)', pos: [0, 0.4, 0.6], color: 0xf85149 },
+        { name: 'Pump Volute Chamber', pos: [0, 1.8, -0.6], color: 0x3fb950 },
+        { name: 'Fluid Reservoir & Solenoid', pos: [-5.2, 0.6, 0.6], color: 0xf5a623 }
     ];
 
     nodesData.forEach(n => {
-        const nodeGeo = new THREE.SphereGeometry(0.3, 16, 16);
+        const nodeGeo = new THREE.SphereGeometry(0.28, 16, 16);
         const nodeMat = new THREE.MeshBasicMaterial({ color: n.color });
         const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
         nodeMesh.position.set(...n.pos);
         nodeMesh.userData = { name: n.name };
         pumpGroup.add(nodeMesh);
+
+        // Ring pulse around node
+        const ringGeo = new THREE.TorusGeometry(0.45, 0.04, 16, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: n.color, transparent: true, opacity: 0.7 });
+        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        ringMesh.position.set(...n.pos);
+        ringMesh.rotation.x = Math.PI / 2;
+        pumpGroup.add(ringMesh);
     });
 
     return pumpGroup;
@@ -230,30 +330,30 @@ function initPump3DViewer(canvasId, containerId) {
 
     pumpScene = new THREE.Scene();
     pumpCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    pumpCamera.position.set(7, 5, 11);
+    pumpCamera.position.set(9, 6, 12);
 
     pumpRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
     pumpRenderer.setSize(container.clientWidth, container.clientHeight);
     pumpRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    // Studio Technical Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     pumpScene.add(ambientLight);
 
-    const dirLight1 = new THREE.DirectionalLight(0x58a6ff, 1.3);
-    dirLight1.position.set(10, 15, 10);
+    const dirLight1 = new THREE.DirectionalLight(0x58a6ff, 1.4);
+    dirLight1.position.set(12, 18, 12);
     pumpScene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight(0xbc8cff, 0.9);
-    dirLight2.position.set(-10, -10, -10);
+    const dirLight2 = new THREE.DirectionalLight(0xbc8cff, 0.8);
+    dirLight2.position.set(-12, -10, -12);
     pumpScene.add(dirLight2);
 
-    // Build Pump Model
+    // Build Model
     const model = build3DPumpModel();
     pumpScene.add(model);
-    pumpCamera.lookAt(0, 0, 0);
+    pumpCamera.lookAt(-1, 0, 1);
 
-    // Orbit Controls via Mouse Drag
+    // Orbit Drag Controls
     let isDragging = false;
     let previousMousePosition = { x: 0, y: 0 };
 
@@ -269,8 +369,8 @@ function initPump3DViewer(canvasId, containerId) {
         const deltaX = e.clientX - previousMousePosition.x;
         const deltaY = e.clientY - previousMousePosition.y;
 
-        pumpGroup.rotation.y += deltaX * 0.01;
-        pumpGroup.rotation.x += deltaY * 0.01;
+        pumpGroup.rotation.y += deltaX * 0.008;
+        pumpGroup.rotation.x += deltaY * 0.008;
 
         previousMousePosition = { x: e.clientX, y: e.clientY };
     });
@@ -279,7 +379,7 @@ function initPump3DViewer(canvasId, containerId) {
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
         pumpCamera.position.z += e.deltaY * 0.01;
-        pumpCamera.position.z = Math.max(5, Math.min(20, pumpCamera.position.z));
+        pumpCamera.position.z = Math.max(6, Math.min(22, pumpCamera.position.z));
     }, { passive: false });
 
     // Window Resize
@@ -294,18 +394,20 @@ function initPump3DViewer(canvasId, containerId) {
     function render3DPump() {
         requestAnimationFrame(render3DPump);
 
-        if (impellerGroup) {
-            impellerGroup.rotation.x += 0.08;
+        // Spin Internal Gears in opposite intermeshing directions
+        if (driveGearMesh && drivenGearMesh) {
+            driveGearMesh.rotation.z += 0.05;
+            drivenGearMesh.rotation.z -= 0.05;
         }
 
         if (isAutoRotating && !isDragging && pumpGroup) {
-            pumpGroup.rotation.y += 0.006;
+            pumpGroup.rotation.y += 0.005;
         }
 
         // Apply vibration shake if telemetry detects high vibration
         if (current3DTelemetry.vib > 0.035 && pumpGroup) {
-            pumpGroup.position.y = (Math.random() - 0.5) * (current3DTelemetry.vib * 2.5);
-            pumpGroup.position.x = (Math.random() - 0.5) * (current3DTelemetry.vib * 2.5);
+            pumpGroup.position.y = (Math.random() - 0.5) * (current3DTelemetry.vib * 2.2);
+            pumpGroup.position.x = (Math.random() - 0.5) * (current3DTelemetry.vib * 2.2);
         } else if (pumpGroup) {
             pumpGroup.position.set(0, 0, 0);
         }
@@ -340,11 +442,10 @@ function set3DRenderMode(mode) {
                     roughness: 0.4
                 });
             } else {
-                // Solid Mode - Re-create solid materials
-                const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1f293d, metalness: 0.85, roughness: 0.25 });
-                const chromeMat = new THREE.MeshStandardMaterial({ color: 0xd0d7de, metalness: 0.95, roughness: 0.1 });
-                const brassMat = new THREE.MeshStandardMaterial({ color: 0xd4a017, metalness: 0.8, roughness: 0.3 });
-                child.material = (child.geometry.type.includes('Torus') || child.geometry.type.includes('Cylinder') && child.position.x > 3) ? chromeMat : bodyMat;
+                // Restore solid
+                const darkNavyMat = new THREE.MeshStandardMaterial({ color: 0x162842, metalness: 0.8, roughness: 0.3 });
+                const steelMat = new THREE.MeshStandardMaterial({ color: 0xc4d1e2, metalness: 0.95, roughness: 0.15 });
+                child.material = (child.geometry.type.includes('Cylinder') && child.scale.x < 1.0) ? steelMat : darkNavyMat;
             }
         }
     });
@@ -362,6 +463,13 @@ function toggle3DRotation() {
 // Update 3D Telemetry State from Dashboard
 function update3DModelTelemetry(temp, vib, faultCode) {
     current3DTelemetry = { temp, vib, fault: faultCode };
+
+    if (fluidMesh) {
+        // Adjust fluid height based on oil/coolant level
+        const levelPct = current3DTelemetry.oil || 60;
+        fluidMesh.scale.y = Math.max(0.2, levelPct / 100);
+    }
+
     if (active3DMode === 'thermal') {
         set3DRenderMode('thermal');
     }
