@@ -1022,6 +1022,12 @@ function updateDashboard(result, schedResult) {
         hp01.time = 'just now';
         renderFleetMap();
     }
+
+    // Sync live telemetry to 3D Digital Twin model
+    if (typeof update3DModelTelemetry === 'function') {
+        const sensorData = getSensorData();
+        update3DModelTelemetry(sensorData.Temperature_C, sensorData.Vibration_g, result.fault_code);
+    }
 }
 
 function renderSchedulerView(sched) {
