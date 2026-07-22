@@ -372,12 +372,15 @@ function initPump3DViewer(canvasId, containerId) {
     const container = document.getElementById(containerId);
     if (!canvas || !container || !window.THREE) return;
 
+    const w = container.clientWidth || container.getBoundingClientRect().width || 800;
+    const h = container.clientHeight || container.getBoundingClientRect().height || 480;
+
     pumpScene = new THREE.Scene();
-    pumpCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    pumpCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
     pumpCamera.position.set(11, 7, 14);
 
     pumpRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
-    pumpRenderer.setSize(container.clientWidth, container.clientHeight);
+    pumpRenderer.setSize(w, h);
     pumpRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     // Studio Technical Lighting
@@ -728,11 +731,16 @@ function update3DModelTelemetry(temp, vib, faultCode) {
     }
 }
 
-// Initialize on DOM load
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        initLanding3DBg();
-        initPump3DViewer('pump-3d-canvas', 'pump-3d-container');
-        initHPUPhotoOverlay();
-    }, 200);
-});
+// Initialize on DOM load or immediate if document ready
+function boot3DVisualizer() {
+    initLanding3DBg();
+    initPump3DViewer('pump-3d-canvas', 'pump-3d-container');
+    initHPUPhotoOverlay();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(boot3DVisualizer, 100));
+} else {
+    setTimeout(boot3DVisualizer, 100);
+}
+window.addEventListener('load', () => setTimeout(boot3DVisualizer, 300));

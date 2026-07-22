@@ -52,6 +52,89 @@ body.theme-high-contrast .primary-btn {
     border: 2px solid #ffffff !important;
     font-weight: 800 !important;
 }
+
+/* HPU Photo Overlay & Interactive Hotspots */
+.hpu-photo-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('hydraulic_power_unit.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 12px;
+    z-index: 5;
+    display: none;
+}
+
+.hpu-hotspot {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    z-index: 12;
+}
+
+.hpu-hotspot-pin {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(13, 17, 23, 0.9);
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    box-shadow: 0 0 12px rgba(88, 166, 255, 0.6);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.hpu-hotspot.warning .hpu-hotspot-pin {
+    border-color: #f0883e;
+    color: #f0883e;
+    box-shadow: 0 0 12px rgba(240, 136, 62, 0.6);
+}
+
+.hpu-hotspot.danger .hpu-hotspot-pin {
+    border-color: #f85149;
+    color: #f85149;
+    box-shadow: 0 0 12px rgba(248, 81, 73, 0.6);
+}
+
+.hpu-hotspot-pulse {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    animation: hpu-pulse-ring 2s infinite ease-out;
+    pointer-events: none;
+}
+
+@keyframes hpu-pulse-ring {
+    0% { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(1.8); opacity: 0; }
+}
+
+.hpu-telemetry-popover {
+    position: absolute;
+    width: 260px;
+    background: rgba(22, 27, 34, 0.95);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(12px);
+    z-index: 25;
+    pointer-events: auto;
+}
+
 body.theme-high-contrast .glass-card {
     border: 2px solid #ffffff !important;
 }
