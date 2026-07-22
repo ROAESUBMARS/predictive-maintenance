@@ -1248,12 +1248,52 @@ function simulateLiveTelemetry() {
     telemetryTickCounter++;
     const tick = telemetryTickCounter * 0.45;
 
-    // 3.5% chance to trigger a random operational anomaly if currently nominal
+    // 3.5% chance to trigger a random operational anomaly if currently nominal and unlatched
     if (!activeSimulationAnomaly && Math.random() < 0.035) {
         const anomalies = ['overheating', 'high_vibration', 'pressure_failure', 'low_oil', 'coolant_leak'];
         activeSimulationAnomaly = anomalies[Math.floor(Math.random() * anomalies.length)];
         const presetSelect = document.getElementById('preset-select');
         if (presetSelect) presetSelect.value = activeSimulationAnomaly;
+    }
+
+    // Auto-dispatch work order when a fault is latched
+    if (activeSimulationAnomaly) {
+        const faultTitleMap = {
+            overheating: 'Overheating Fault',
+            high_vibration: 'High Vibration Fault',
+            pressure_failure: 'Pressure Failure Fault',
+            low_oil: 'Low Oil Level Fault',
+            coolant_leak: 'Coolant Leak'
+        };
+        const faultTitle = faultTitleMap[activeSimulationAnomaly] || 'System Anomaly';
+        const existingWO = workOrders.find(w => w.fault.includes(faultTitle) && w.status !== 'Completed');
+        
+        if (!existingWO) {
+            const woNumber = 'WO-' + Math.floor(1000 + Math.random() * 9000);
+            const techName = currentTechName || 'Sarah Jenkins';
+            workOrders.push({
+                id: woNumber,
+                fault: faultTitle,
+                assignee: 'Tech: ' + techName,
+                priority: 'High',
+                status: 'New',
+                time: 'Just Now',
+                unlocked: false,
+                diagnosis: {
+                    fault_name: faultTitle,
+                    primary_actions: [
+                        'Inspect pump HP-01 assembly on-site.',
+                        'Verify active sensor metrics & clear fault alert.',
+                        'Perform necessary component repair or replacement.',
+                        'Mark work order as complete to release fault latch.'
+                    ],
+                    spare_parts: ['Inspection seal kit', 'System lubricant']
+                }
+            });
+            renderEngineerWorkOrdersTable();
+            renderTechWorkOrders();
+            showToast(`⚠️ <strong>FAULT LATCHED: ${faultTitle}</strong>. Dispatched <strong>${woNumber}</strong> to Technician. System remains on fault until repair completion.`, 'warning', 6000);
+        }
     }
 
     // Dynamic operational wave oscillations
