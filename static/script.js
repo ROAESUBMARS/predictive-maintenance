@@ -1256,66 +1256,37 @@ function simulateLiveTelemetry() {
         if (presetSelect) presetSelect.value = activeSimulationAnomaly;
     }
 
-    // Auto-dispatch work order when a fault is latched
-    if (activeSimulationAnomaly) {
-        const faultTitleMap = {
-            overheating: 'Overheating Fault',
-            high_vibration: 'High Vibration Fault',
-            pressure_failure: 'Pressure Failure Fault',
-            low_oil: 'Low Oil Level Fault',
-            coolant_leak: 'Coolant Leak'
-        };
-        const faultTitle = faultTitleMap[activeSimulationAnomaly] || 'System Anomaly';
-        const existingWO = workOrders.find(w => w.fault.includes(faultTitle) && w.status !== 'Completed');
-        
-        if (!existingWO) {
-            const woNumber = 'WO-' + Math.floor(1000 + Math.random() * 9000);
-            const techName = currentTechName || 'Sarah Jenkins';
-            workOrders.push({
-                id: woNumber,
-                fault: faultTitle,
-                assignee: 'Tech: ' + techName,
-                priority: 'High',
-                status: 'New',
-                time: 'Just Now',
-                unlocked: false,
-                diagnosis: {
-                    fault_name: faultTitle,
-                    primary_actions: [
-                        'Inspect pump HP-01 assembly on-site.',
-                        'Verify active sensor metrics & clear fault alert.',
-                        'Perform necessary component repair or replacement.',
-                        'Mark work order as complete to release fault latch.'
-                    ],
-                    spare_parts: ['Inspection seal kit', 'System lubricant']
-                }
-            });
-            renderEngineerWorkOrdersTable();
-            renderTechWorkOrders();
-            showToast(`⚠️ <strong>FAULT LATCHED: ${faultTitle}</strong>. Dispatched <strong>${woNumber}</strong> to Technician. System remains on fault until repair completion.`, 'warning', 6000);
-        }
-    }
-
-    // Dynamic operational wave oscillations
-    let vibVal = 0.024 + Math.sin(tick) * 0.012 + (Math.random() * 0.006 - 0.003);
-    let flowVal = 310 + Math.cos(tick * 0.8) * 35 + (Math.random() * 12 - 6);
-    let oilVal = 62 + Math.sin(tick * 0.5) * 14 + (Math.random() * 4 - 2);
-    let tempVal = 70 + Math.sin(tick * 0.3) * 6 + (Math.random() * 2 - 1);
-    let presVal = 100 + Math.cos(tick * 0.4) * 8 + (Math.random() * 3 - 1.5);
-    let rpmVal = 1500 + Math.sin(tick * 0.6) * 45 + (Math.random() * 20 - 10);
+    let tempVal, presVal, vibVal, flowVal, oilVal, rpmVal;
 
     if (activeSimulationAnomaly) {
+        // FAULT LOCKED STATE: Hold steady/still on exact fault parameters without drifting or oscillation
         const target = PRESETS[activeSimulationAnomaly];
         if (target) {
-            tempVal += (target.temp - 70) * 0.5;
-            presVal += (target.pres - 100) * 0.5;
-            vibVal += (target.vib - 0.020) * 0.7;
-            flowVal += (target.flow - 300) * 0.5;
-            oilVal += (target.oil - 60) * 0.5;
-            if (target.leak === 1 && Math.random() < 0.4) {
+            tempVal = target.temp;
+            presVal = target.pres;
+            vibVal = target.vib;
+            flowVal = target.flow;
+            oilVal = target.oil;
+            rpmVal = target.rpm;
+            if (target.leak === 1) {
                 document.getElementById('leak-select').value = "1";
             }
+        } else {
+            tempVal = parseFloat(tempSlider.value);
+            presVal = parseFloat(document.getElementById('pres-slider').value);
+            vibVal = parseFloat(document.getElementById('vib-slider').value);
+            flowVal = parseFloat(document.getElementById('flow-slider').value);
+            oilVal = parseFloat(document.getElementById('oil-slider').value);
+            rpmVal = parseFloat(document.getElementById('rpm-slider').value);
         }
+    } else {
+        // NOMINAL STATE: Natural operational wave oscillations around baseline parameters
+        vibVal = 0.024 + Math.sin(tick) * 0.012 + (Math.random() * 0.006 - 0.003);
+        flowVal = 310 + Math.cos(tick * 0.8) * 35 + (Math.random() * 12 - 6);
+        oilVal = 62 + Math.sin(tick * 0.5) * 14 + (Math.random() * 4 - 2);
+        tempVal = 70 + Math.sin(tick * 0.3) * 6 + (Math.random() * 2 - 1);
+        presVal = 100 + Math.cos(tick * 0.4) * 8 + (Math.random() * 3 - 1.5);
+        rpmVal = 1500 + Math.sin(tick * 0.6) * 45 + (Math.random() * 20 - 10);
     }
 
     setSliderValue('temp', Math.min(Math.max(tempVal, 20), 150).toFixed(1));
@@ -1327,7 +1298,7 @@ function simulateLiveTelemetry() {
 
     updateRawDataTable();
     
-    // Direct, unblocked chart tick on every interval (zero dependency on API network state)
+    // Direct chart tick (preserves locked fault values when latched)
     updateChartPoint(vibVal, flowVal, oilVal);
 
     if (typeof update3DModelTelemetry === 'function') {
