@@ -431,34 +431,58 @@
                             </div>
                         </div>
 
-                        <!-- KPIs -->
-                        <div class="kpi-grid">
+                        <!-- Emergency Interlock Shutdown Alert Banner -->
+                        <div id="emergency-shutdown-banner" style="display:none; background:rgba(248, 81, 73, 0.18); border: 2px solid #f85149; border-radius: 12px; padding: 18px 22px; margin-bottom: 24px; box-shadow: 0 0 24px rgba(248,81,73,0.3); backdrop-filter: blur(10px);">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                                <div style="display:flex; align-items:center; gap:16px;">
+                                    <div style="width:48px; height:48px; border-radius:50%; background:rgba(248,81,73,0.3); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                        <i class="fa-solid fa-power-off" style="color:#f85149; font-size:24px;"></i>
+                                    </div>
+                                    <div>
+                                        <h3 style="color:#f85149; font-size:16px; margin:0 0 4px 0; font-weight:800; letter-spacing:0.02em;">🚨 AUTOMATIC EMERGENCY SHUTDOWN ACTIVATED</h3>
+                                        <p id="shutdown-reason-text" style="color:#e6edf3; font-size:13px; margin:0; line-height:1.4;">Safety urgency rating dropped below 6/10 threshold. Machinery power tripped automatically.</p>
+                                    </div>
+                                </div>
+                                <button onclick="resetEmergencyShutdown()" class="primary-btn" style="width:auto; padding:10px 20px; font-size:12px; background:#f85149; color:#fff; font-weight:700; border-radius:8px; flex-shrink:0;">
+                                    <i class="fa-solid fa-rotate-left"></i> Reset Interlock & Restore Power
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Enhanced KPIs Grid -->
+                        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
                             <div class="kpi-card glass-card">
                                 <div class="kpi-icon"><i class="fa-solid fa-heart-pulse"></i></div>
                                 <div class="kpi-info">
-                                    <h3>Overall Health</h3>
+                                    <h3>Health Index</h3>
                                     <div class="kpi-value" id="kpi-health">100/100</div>
+                                </div>
+                            </div>
+                            <div class="kpi-card glass-card">
+                                <div class="kpi-icon"><i class="fa-solid fa-gauge-high"></i></div>
+                                <div class="kpi-info">
+                                    <h3>Safety Urgency</h3>
+                                    <div class="kpi-value status-optimal" id="kpi-urgency">10/10 (Safe)</div>
                                 </div>
                             </div>
                             <div class="kpi-card glass-card">
                                 <div class="kpi-icon"><i class="fa-solid fa-shield-halved"></i></div>
                                 <div class="kpi-info">
-                                    <h3>System Status</h3>
-                                    <div class="kpi-value status-optimal" id="kpi-status">Optimal</div>
+                                    <h3>Auto Interlock</h3>
+                                    <div class="kpi-value status-optimal" id="kpi-interlock">ARMED</div>
                                 </div>
                             </div>
                             <div class="kpi-card glass-card">
-                                <div class="kpi-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
-                                <div class="kpi-icon-overlay"></div>
+                                <div class="kpi-icon"><i class="fa-solid fa-hourglass-half"></i></div>
                                 <div class="kpi-info">
-                                    <h3>Uptime Projection</h3>
-                                    <div class="kpi-value" id="kpi-uptime">99.9%</div>
+                                    <h3>Remaining Life</h3>
+                                    <div class="kpi-value" id="kpi-rul">720.0 hrs</div>
                                 </div>
                             </div>
                             <div class="kpi-card glass-card">
                                 <div class="kpi-icon"><i class="fa-solid fa-piggy-bank"></i></div>
                                 <div class="kpi-info">
-                                    <h3>Estimated Savings</h3>
+                                    <h3>Cost Savings</h3>
                                     <div class="kpi-value" id="kpi-savings">$14.2k</div>
                                 </div>
                             </div>

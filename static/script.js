@@ -983,11 +983,37 @@ function updateDashboard(result, schedResult) {
     document.getElementById('confidence-val').textContent = (ai.confidence * 100).toFixed(1) + '%';
 
     // ENGINEER VIEW KPIs
-    document.getElementById('kpi-health').textContent = isOptimal ? '100/100' : (ai.risk_level === 'High' ? '45/100' : '65/100');
-    const kpiStatus = document.getElementById('kpi-status');
-    kpiStatus.textContent = isOptimal ? 'Optimal' : result.fault;
-    kpiStatus.className = 'kpi-value ' + (isOptimal ? 'status-optimal' : (result.severity === 'critical' ? 'status-critical' : 'status-warning'));
-    document.getElementById('kpi-savings').textContent = isOptimal ? '$14.2k' : '$0.0k';
+    const urgencyInfo = ai.urgency_score_info || { urgency_score: 10, urgency_label: '10/10 (Safe)', auto_shutdown_required: false };
+    const rulInfo = ai.rul_info || { rul_hours: 720.0 };
+
+    const kpiHealth = document.getElementById('kpi-health');
+    if (kpiHealth) kpiHealth.textContent = isOptimal ? '100/100' : (ai.severity === 'critical' ? '30/100' : '70/100');
+
+    const kpiUrgency = document.getElementById('kpi-urgency');
+    if (kpiUrgency) {
+        kpiUrgency.textContent = urgencyInfo.urgency_label;
+        kpiUrgency.className = 'kpi-value ' + (urgencyInfo.urgency_score < 6 ? 'status-critical' : (urgencyInfo.urgency_score < 10 ? 'status-warning' : 'status-optimal'));
+    }
+
+    const kpiInterlock = document.getElementById('kpi-interlock');
+    if (kpiInterlock) {
+        kpiInterlock.textContent = urgencyInfo.auto_shutdown_required ? 'TRIPPED (Shutdown)' : 'ARMED (Normal)';
+        kpiInterlock.className = 'kpi-value ' + (urgencyInfo.auto_shutdown_required ? 'status-critical' : 'status-optimal');
+    }
+
+    const kpiRul = document.getElementById('kpi-rul');
+    if (kpiRul) kpiRul.textContent = `${rulInfo.rul_hours} hrs`;
+
+    const kpiSavings = document.getElementById('kpi-savings');
+    if (kpiSavings) kpiSavings.textContent = isOptimal ? '$14.2k' : '$0.0k';
+
+    // 🚨 AUTOMATIC MACHINERY SHUTDOWN CHECK (Urgency < 6/10)
+    if (urgencyInfo.auto_shutdown_required) {
+        executeAutomaticShutdown(urgencyInfo.shutdown_reason || "Safety urgency rating dropped below 6/10 threshold. Machinery power tripped automatically.");
+    } else {
+        const shutdownBanner = document.getElementById('emergency-shutdown-banner');
+        if (shutdownBanner) shutdownBanner.style.display = 'none';
+    }
 
     // ENGINEER VIEW Diagnostic Box
     const panel = document.getElementById('diagnostic-content');
@@ -1005,7 +1031,7 @@ function updateDashboard(result, schedResult) {
             <p>${result.recommendation}</p>
             <div class="diag-details">
                 <strong>Severity:</strong> ${result.severity.toUpperCase()} <br/>
-                <strong>Urgency:</strong> ${ai.urgency_level} <br/>
+                <strong>Safety Urgency:</strong> <span style="color:${urgencyInfo.urgency_score < 6 ? '#f85149' : '#f5a623'}; font-weight:700;">${urgencyInfo.urgency_label}</span> <br/>
                 <strong>Primary Actions:</strong>
                 <ul>${actions}</ul>
             </div>
@@ -1159,6 +1185,75 @@ function applyDecisionStrategy(optId, encodedTitle, encodedTradeoff) {
     const title = decodeURIComponent(encodedTitle);
     const tradeoff = decodeURIComponent(encodedTradeoff);
     showToast(`<strong>Strategy Applied:</strong> ${title}. ${tradeoff}`, 'success', 5000);
+}
+
+function executeAutomaticShutdown(reason) {
+    const banner = document.getElementById('emergency-shutdown-banner');
+    const reasonText = document.getElementById('shutdown-reason-text');
+    
+    if (banner) banner.style.display = 'block';
+    if (reasonText) reasonText.textContent = reason;
+
+    // Reset sliders to zeroed power state
+    setSliderValue('rpm', 0);
+    setSliderValue('pres', 0);
+    setSliderValue('flow', 0);
+    updateRawDataTable();
+
+    // Pause Live Telemetry if running
+    if (liveTelemetryInterval) {
+        clearInterval(liveTelemetryInterval);
+        const liveToggle = document.getElementById('live-telemetry-toggle');
+        if (liveToggle) liveToggle.checked = false;
+    }
+
+    // Auto-generate Critical Work Order if none active for this shutdown
+    const existingAutoWO = workOrders.find(w => w.id.startsWith('WO-AUTO-') && w.status !== 'Completed');
+    if (!existingAutoWO) {
+        const woNumber = 'WO-AUTO-' + Math.floor(1000 + Math.random() * 9000);
+        workOrders.push({
+            id: woNumber,
+            fault: 'AUTOMATIC EMERGENCY SHUTDOWN',
+            assignee: 'Tech: Sarah Jenkins',
+            priority: 'Critical',
+            status: 'New',
+            time: 'Just now (Tripped)',
+            unlocked: false,
+            diagnosis: {
+                fault_name: 'Emergency Machinery Trip (Urgency < 6/10)',
+                primary_actions: [
+                    'Perform Lockout/Tagout (LOTO) on main breaker.',
+                    'Inspect pump housing for physical thermal/vibration damage.',
+                    'Verify fluid and coolant line pressure decay.',
+                    'Reset interlock switch after technician signoff.'
+                ],
+                spare_parts: ['Emergency seal kit', 'Safety pressure valve']
+            }
+        });
+        renderEngineerWorkOrdersTable();
+    }
+
+    showToast(`🚨 <strong>AUTOMATIC SHUTDOWN:</strong> ${reason}`, 'error', 7000);
+}
+
+function resetEmergencyShutdown() {
+    const banner = document.getElementById('emergency-shutdown-banner');
+    if (banner) banner.style.display = 'none';
+
+    // Reset sliders to normal baseline preset
+    const presetSelect = document.getElementById('preset-select');
+    if (presetSelect) {
+        presetSelect.value = 'normal';
+        presetSelect.dispatchEvent(new Event('change'));
+    }
+
+    const kpiInterlock = document.getElementById('kpi-interlock');
+    if (kpiInterlock) {
+        kpiInterlock.textContent = 'ARMED (Normal)';
+        kpiInterlock.className = 'kpi-value status-optimal';
+    }
+
+    showToast('<strong>Interlock Reset:</strong> Emergency shutdown cleared. Machinery restored to nominal baseline.', 'success', 4000);
 }
 
 function renderSchedulerView(sched) {

@@ -427,6 +427,53 @@ class AIRecommendationEngine:
         }
         return root_causes.get(fault_code, root_causes[0])
 
+    @staticmethod
+    def calculate_urgency_score(fault_code: int, sensor_data: Dict) -> Dict:
+        """
+        Calculate health & safety urgency score (1-10 scale).
+        Where 10/10 is optimal/safe, 6-9/10 is warning/moderate, and <6/10 is CRITICAL (triggers automatic shutdown).
+        """
+        if fault_code == 0:
+            return {
+                "urgency_score": 10,
+                "urgency_label": "10/10 (Safe)",
+                "auto_shutdown_required": False,
+                "shutdown_reason": None
+            }
+
+        temp = sensor_data.get("Temperature_C", 70)
+        pres = sensor_data.get("Pressure_psi", 100)
+        vib = sensor_data.get("Vibration_g", 0.02)
+        leak = sensor_data.get("Coolant_Leak", 0)
+
+        # Base safety score (1-10) where 10 = safest, 1 = most severe
+        base_scores = {
+            1: 3,  # Overheating: Safety score 3/10 (< 6 cutoff!)
+            2: 2,  # High Vibration: Safety score 2/10 (< 6 cutoff!)
+            3: 1,  # Pressure Failure: Safety score 1/10 (< 6 cutoff!)
+            4: 7,  # Low Oil Level: Safety score 7/10 (>= 6, warning stage)
+            5: 2   # Coolant Leak: Safety score 2/10 (< 6 cutoff!)
+        }
+        
+        score = base_scores.get(fault_code, 5)
+        
+        # Penalize for severe telemetry spikes
+        if temp > 100 or vib > 0.06 or pres < 50 or leak == 1:
+            score = max(1, score - 1)
+            
+        auto_shutdown = score < 6
+        reason = None
+        if auto_shutdown:
+            fault_name = AIRecommendationEngine._initialize_fault_profiles().get(fault_code, {}).get('name', 'Critical Fault')
+            reason = f"Safety Urgency Score ({score}/10) dropped below 6/10 critical threshold due to active {fault_name}. Automatic interlock machinery shutdown triggered."
+
+        return {
+            "urgency_score": score,
+            "urgency_label": f"{score}/10 ({'CRITICAL SHUTDOWN' if score < 6 else 'WARNING'})",
+            "auto_shutdown_required": auto_shutdown,
+            "shutdown_reason": reason
+        }
+
     def generate_recommendations(self, fault_code: int, sensor_data: Dict, 
                                 confidence: float = 0.85) -> Dict:
         """
@@ -446,6 +493,7 @@ class AIRecommendationEngine:
         decision_matrix = self.generate_decision_matrix(fault_code, sensor_data, confidence)
         cascading_risks = self.analyze_cascading_risks(sensor_data, fault_code)
         root_causes = self.generate_root_cause_analysis(fault_code, sensor_data)
+        urgency_score_info = self.calculate_urgency_score(fault_code, sensor_data)
         
         recommendations = {
             "fault_code": fault_code,
@@ -467,7 +515,8 @@ class AIRecommendationEngine:
             "rul_info": rul_info,
             "decision_matrix": decision_matrix,
             "cascading_risks": cascading_risks,
-            "root_causes": root_causes
+            "root_causes": root_causes,
+            "urgency_score_info": urgency_score_info
         }
         
         return recommendations

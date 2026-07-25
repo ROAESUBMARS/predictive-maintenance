@@ -396,6 +396,7 @@ def predict():
                 "decision_matrix":   rec.get("decision_matrix", []),
                 "cascading_risks":   rec.get("cascading_risks", []),
                 "root_causes":        rec.get("root_causes", []),
+                "urgency_score_info": rec.get("urgency_score_info", {}),
             }
         })
 
@@ -496,6 +497,7 @@ def recommend():
             "decision_matrix":   rec.get("decision_matrix", []),
             "cascading_risks":   rec.get("cascading_risks", []),
             "root_causes":        rec.get("root_causes", []),
+            "urgency_score_info": rec.get("urgency_score_info", {}),
         })
 
     except Exception as e:
