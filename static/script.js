@@ -1440,6 +1440,7 @@ function renderTechnicianView(ai, isOptimal) {
 }
 
 let telemetryTickCounter = 0;
+let lastDiagnosticTick = 0;
 
 function simulateLiveTelemetry() {
     const tempSlider = document.getElementById('temp-slider');
@@ -1448,64 +1449,35 @@ function simulateLiveTelemetry() {
     telemetryTickCounter++;
     const tick = telemetryTickCounter * 0.45;
 
-    // 3.5% chance to trigger a random operational anomaly if currently nominal and unlatched
-    if (!activeSimulationAnomaly && Math.random() < 0.035) {
-        const anomalies = ['overheating', 'high_vibration', 'pressure_failure', 'low_oil', 'coolant_leak'];
-        activeSimulationAnomaly = anomalies[Math.floor(Math.random() * anomalies.length)];
-        const presetSelect = document.getElementById('preset-select');
-        if (presetSelect) presetSelect.value = activeSimulationAnomaly;
-    }
+    // Read active slider baselines configured by the user
+    let baseTemp = parseFloat(document.getElementById('temp-slider').value) || 70;
+    let basePres = parseFloat(document.getElementById('pres-slider').value) || 100;
+    let baseVib  = parseFloat(document.getElementById('vib-slider').value)  || 0.020;
+    let baseFlow = parseFloat(document.getElementById('flow-slider').value) || 300;
+    let baseOil  = parseFloat(document.getElementById('oil-slider').value)  || 60;
+    let baseRpm  = parseFloat(document.getElementById('rpm-slider').value)  || 1500;
 
-    let tempVal, presVal, vibVal, flowVal, oilVal, rpmVal;
+    // Apply realistic micro-fluctuations (sensor noise) around active user baselines
+    let tempVal = baseTemp + (Math.sin(tick * 0.3) * 0.8) + (Math.random() * 0.4 - 0.2);
+    let presVal = basePres + (Math.cos(tick * 0.4) * 1.2) + (Math.random() * 0.6 - 0.3);
+    let vibVal  = baseVib  + (Math.sin(tick) * 0.002) + (Math.random() * 0.001 - 0.0005);
+    let flowVal = baseFlow + (Math.cos(tick * 0.8) * 3.5) + (Math.random() * 2.0 - 1.0);
+    let oilVal  = baseOil  + (Math.sin(tick * 0.5) * 0.4) + (Math.random() * 0.2 - 0.1);
+    let rpmVal  = baseRpm  + (Math.sin(tick * 0.6) * 12.0) + (Math.random() * 6.0 - 3.0);
 
-    if (activeSimulationAnomaly) {
-        // FAULT LOCKED STATE: Hold steady/still on exact fault parameters without drifting or oscillation
-        const target = PRESETS[activeSimulationAnomaly];
-        if (target) {
-            tempVal = target.temp;
-            presVal = target.pres;
-            vibVal = target.vib;
-            flowVal = target.flow;
-            oilVal = target.oil;
-            rpmVal = target.rpm;
-            if (target.leak === 1) {
-                document.getElementById('leak-select').value = "1";
-            }
-        } else {
-            tempVal = parseFloat(tempSlider.value);
-            presVal = parseFloat(document.getElementById('pres-slider').value);
-            vibVal = parseFloat(document.getElementById('vib-slider').value);
-            flowVal = parseFloat(document.getElementById('flow-slider').value);
-            oilVal = parseFloat(document.getElementById('oil-slider').value);
-            rpmVal = parseFloat(document.getElementById('rpm-slider').value);
-        }
-    } else {
-        // NOMINAL STATE: Natural operational wave oscillations around baseline parameters
-        vibVal = 0.024 + Math.sin(tick) * 0.012 + (Math.random() * 0.006 - 0.003);
-        flowVal = 310 + Math.cos(tick * 0.8) * 35 + (Math.random() * 12 - 6);
-        oilVal = 62 + Math.sin(tick * 0.5) * 14 + (Math.random() * 4 - 2);
-        tempVal = 70 + Math.sin(tick * 0.3) * 6 + (Math.random() * 2 - 1);
-        presVal = 100 + Math.cos(tick * 0.4) * 8 + (Math.random() * 3 - 1.5);
-        rpmVal = 1500 + Math.sin(tick * 0.6) * 45 + (Math.random() * 20 - 10);
-    }
-
-    setSliderValue('temp', Math.min(Math.max(tempVal, 20), 150).toFixed(1));
-    setSliderValue('pres', Math.min(Math.max(presVal, 0), 200).toFixed(1));
-    setSliderValue('vib', Math.min(Math.max(vibVal, 0.005), 0.095).toFixed(3));
-    setSliderValue('flow', Math.min(Math.max(flowVal, 50), 850).toFixed(0));
-    setSliderValue('oil', Math.min(Math.max(oilVal, 5), 100).toFixed(0));
-    setSliderValue('rpm', Math.min(Math.max(rpmVal, 500), 4500).toFixed(0));
-
+    // Update raw data display & telemetry chart smoothly
     updateRawDataTable();
-    
-    // Direct chart tick (preserves locked fault values when latched)
-    updateChartPoint(vibVal, flowVal, oilVal);
+    updateChartPoint(vibVal.toFixed(3), flowVal.toFixed(0), oilVal.toFixed(0));
 
     if (typeof update3DModelTelemetry === 'function') {
-        update3DModelTelemetry(tempVal, vibVal, activeSimulationAnomaly ? 1 : 0);
+        update3DModelTelemetry(tempVal, vibVal, baseVib > 0.04 || baseTemp > 88 ? 1 : 0);
     }
 
-    runDiagnostic(true); // background silent diagnostic evaluation
+    // Evaluate diagnostic analysis every 3 seconds (3 ticks) to avoid API rate limits
+    if (telemetryTickCounter - lastDiagnosticTick >= 3) {
+        lastDiagnosticTick = telemetryTickCounter;
+        runDiagnostic(true); // background silent diagnostic evaluation
+    }
 }
 
 function updateChartPoint(vib, flow, oil) {
