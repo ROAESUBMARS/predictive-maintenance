@@ -1015,6 +1015,9 @@ function updateDashboard(result, schedResult) {
     // Render technician details too
     renderTechnicianView(ai, isOptimal);
 
+    // Render post-diagnostic prescriptive decision matrix hub
+    renderDecisionHubView(ai);
+
     // Render maintenance scheduler widget in both Engineer and Reliability views
     renderSchedulerView(schedResult);
     renderReliabilitySchedulerView(schedResult);
@@ -1054,6 +1057,108 @@ function updateDashboard(result, schedResult) {
         const sensorData = getSensorData();
         update3DModelTelemetry(sensorData.Temperature_C, sensorData.Vibration_g, result.fault_code);
     }
+}
+
+function renderDecisionHubView(ai) {
+    if (!ai) return;
+
+    // RUL Meter
+    const rulInfo = ai.rul_info || { rul_hours: 720.0, status: 'Nominal', confidence_range: '650-800 hrs' };
+    const rulBadge = document.getElementById('rul-badge');
+    const rulHoursText = document.getElementById('rul-hours-text');
+    const rulProgressBar = document.getElementById('rul-progress-bar');
+    const rulRange = document.getElementById('rul-confidence-range');
+
+    if (rulBadge) rulBadge.textContent = `RUL: ${rulInfo.rul_hours} hrs`;
+    if (rulHoursText) rulHoursText.textContent = `${rulInfo.rul_hours} hrs (${rulInfo.status})`;
+    if (rulRange) rulRange.textContent = `Est Range: ${rulInfo.confidence_range}`;
+
+    if (rulProgressBar) {
+        const pct = Math.min(100, Math.max(5, (rulInfo.rul_hours / 720.0) * 100));
+        rulProgressBar.style.width = pct + '%';
+        if (rulInfo.rul_hours < 12) {
+            rulProgressBar.style.background = '#f85149'; // critical red
+        } else if (rulInfo.rul_hours < 48) {
+            rulProgressBar.style.background = '#f5a623'; // warning amber
+        } else {
+            rulProgressBar.style.background = '#3fb950'; // green
+        }
+    }
+
+    // Decision Strategy Matrix Options
+    const optionsContainer = document.getElementById('decision-options-container');
+    if (optionsContainer && ai.decision_matrix) {
+        optionsContainer.innerHTML = '';
+        ai.decision_matrix.forEach(opt => {
+            const card = document.createElement('div');
+            card.className = 'glass-card';
+            card.style.padding = '12px 14px';
+            card.style.border = opt.tag.includes('RECOMMENDED') ? '1px solid var(--accent)' : '1px solid var(--card-border)';
+            card.style.background = opt.tag.includes('RECOMMENDED') ? 'rgba(88, 166, 255, 0.08)' : 'rgba(255, 255, 255, 0.02)';
+            
+            const badgeColor = opt.tag.includes('RECOMMENDED') ? 'var(--accent)' : (opt.tag.includes('SAFETY') ? '#3fb950' : '#f5a623');
+            
+            let stepsHtml = '';
+            if (opt.action_steps && opt.action_steps.length > 0) {
+                stepsHtml = `<ul style="margin:6px 0 0 16px; padding:0; font-size:11px; color:var(--text-secondary);">
+                    ${opt.action_steps.map(s => `<li>${s}</li>`).join('')}
+                </ul>`;
+            }
+
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                    <strong style="font-size:13px; color:var(--text-primary);">${opt.title}</strong>
+                    <span class="badge" style="font-size:10px; background:rgba(255,255,255,0.05); color:${badgeColor}; border:1px solid ${badgeColor};">${opt.tag}</span>
+                </div>
+                <p style="font-size:11.5px; color:var(--text-secondary); margin:0 0 6px 0;">${opt.tradeoff}</p>
+                <div style="display:flex; gap:16px; font-size:11px; color:var(--text-secondary); margin-bottom:8px;">
+                    <span>Risk: <strong style="color:${opt.risk_score > 50 ? '#f85149' : (opt.risk_score > 15 ? '#f5a623' : '#3fb950')}">${opt.risk_score}%</strong></span>
+                    <span>Downtime: <strong>${opt.est_downtime}</strong></span>
+                    <span>Impact: <strong>${opt.production_impact}%</strong></span>
+                </div>
+                ${stepsHtml}
+                <button class="primary-btn" style="margin-top:10px; padding:6px 12px; font-size:11px; background:${opt.tag.includes('RECOMMENDED') ? 'var(--accent)' : 'rgba(255,255,255,0.1)'}; color:${opt.tag.includes('RECOMMENDED') ? '#000' : '#fff'}; font-weight:700;" onclick="applyDecisionStrategy('${opt.id}', '${encodeURIComponent(opt.title)}', '${encodeURIComponent(opt.tradeoff)}')">
+                    <i class="fa-solid fa-check"></i> Apply Decision Strategy
+                </button>
+            `;
+            optionsContainer.appendChild(card);
+        });
+    }
+
+    // Root Cause & Cascading Risk
+    const rootContainer = document.getElementById('root-causes-container');
+    if (rootContainer) {
+        let html = '';
+        if (ai.root_causes && ai.root_causes.length > 0) {
+            html += `<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">`;
+            ai.root_causes.forEach(rc => {
+                html += `<div style="background:rgba(255,255,255,0.02); border:1px solid var(--card-border); border-radius:6px; padding:8px 10px;">
+                    <div style="display:flex; justify-content:space-between; font-weight:600; font-size:11.5px;">
+                        <span>${rc.cause}</span>
+                        <span style="color:var(--accent);">${rc.confidence} confidence</span>
+                    </div>
+                    <div style="font-size:10.5px; color:var(--text-secondary); margin-top:2px;">Check: ${rc.verification}</div>
+                </div>`;
+            });
+            html += `</div>`;
+        }
+
+        if (ai.cascading_risks && ai.cascading_risks.length > 0) {
+            html += `<div style="font-weight:700; font-size:11px; text-transform:uppercase; color:var(--text-secondary); margin:10px 0 6px 0;">Cascading Risk Chain</div>`;
+            ai.cascading_risks.forEach(cr => {
+                html += `<div style="font-size:11px; color:#f5a623; margin-bottom:4px;">
+                    <i class="fa-solid fa-link"></i> ${cr.chain} (${cr.probability})
+                </div>`;
+            });
+        }
+        rootContainer.innerHTML = html;
+    }
+}
+
+function applyDecisionStrategy(optId, encodedTitle, encodedTradeoff) {
+    const title = decodeURIComponent(encodedTitle);
+    const tradeoff = decodeURIComponent(encodedTradeoff);
+    showToast(`<strong>Strategy Applied:</strong> ${title}. ${tradeoff}`, 'success', 5000);
 }
 
 function renderSchedulerView(sched) {

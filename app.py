@@ -392,6 +392,10 @@ def predict():
                 "cost_estimate":      rec["cost_estimate"],
                 "next_check":         rec["next_check"],
                 "technician_notes":   rec["technician_notes"],
+                "rul_info":           rec.get("rul_info", {}),
+                "decision_matrix":   rec.get("decision_matrix", []),
+                "cascading_risks":   rec.get("cascading_risks", []),
+                "root_causes":        rec.get("root_causes", []),
             }
         })
 
@@ -483,11 +487,15 @@ def recommend():
             "preventive_measures": rec["preventive_measures"],
             "estimated_downtime":  rec.get("estimated_downtime", "N/A"),
             "sensor_health":       rec["sensor_health"],
-            "anomalies":           rec["anomalies"],
-            "spare_parts":         rec["spare_parts"],
-            "cost_estimate":       rec["cost_estimate"],
-            "next_check":          rec["next_check"],
+            "anomalies":          rec["anomalies"],
+            "spare_parts":        rec["spare_parts"],
+            "cost_estimate":      rec["cost_estimate"],
+            "next_check":         rec["next_check"],
             "technician_notes":    rec["technician_notes"],
+            "rul_info":           rec.get("rul_info", {}),
+            "decision_matrix":   rec.get("decision_matrix", []),
+            "cascading_risks":   rec.get("cascading_risks", []),
+            "root_causes":        rec.get("root_causes", []),
         })
 
     except Exception as e:
@@ -677,11 +685,17 @@ def chat():
 
     if diagnosis:
         system_prompt += (
-            "Active Diagnostics:\n"
+            "Active Diagnostics & Decision Matrix:\n"
             f"- Predicted Fault: {diagnosis.get('fault_name', 'N/A')} (Code: {diagnosis.get('fault_code', 'N/A')})\n"
             f"- Recommended Action: {diagnosis.get('recommendation', 'N/A')}\n"
-            f"- Severity: {diagnosis.get('severity', 'N/A').upper()}\n\n"
+            f"- Severity: {diagnosis.get('severity', 'N/A').upper()}\n"
+            f"- Remaining Useful Life (RUL): {diagnosis.get('rul_info', {}).get('rul_hours', 'N/A')} hours ({diagnosis.get('rul_info', {}).get('confidence_range', '')})\n"
         )
+        if diagnosis.get('decision_matrix'):
+            system_prompt += "- Prescriptive Decision Options:\n"
+            for opt in diagnosis.get('decision_matrix'):
+                system_prompt += f"  • {opt.get('title')} [{opt.get('tag')}]: Risk {opt.get('risk_score')}%, Downtime: {opt.get('est_downtime')}. {opt.get('tradeoff')}\n"
+        system_prompt += "\n"
 
     system_prompt += (
         "Answer the user's questions clearly, concisely, and professionally. Use Markdown for formatting "

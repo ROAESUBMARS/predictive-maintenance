@@ -236,6 +236,197 @@ class AIRecommendationEngine:
         
         return anomalies
 
+    def calculate_rul_hours(self, fault_code: int, sensor_data: Dict, confidence: float = 0.85) -> Dict:
+        """Calculate dynamic Remaining Useful Life (RUL) in operating hours."""
+        if fault_code == 0:
+            return {"rul_hours": 720.0, "status": "Nominal", "confidence_range": "650-800 hrs"}
+        
+        # Base RUL by fault code
+        base_rul = {1: 18.0, 2: 12.0, 3: 8.0, 4: 48.0, 5: 14.0}.get(fault_code, 24.0)
+        
+        # Degradation acceleration factors based on telemetry Z-scores
+        temp = sensor_data.get("Temperature_C", 70)
+        vib = sensor_data.get("Vibration_g", 0.02)
+        pres = sensor_data.get("Pressure_psi", 100)
+        oil = sensor_data.get("Oil_Level_pct", 60)
+        
+        acceleration = 1.0
+        if temp > 88: acceleration += (temp - 88) * 0.05
+        if vib > 0.04: acceleration += (vib - 0.04) * 20.0
+        if pres < 80: acceleration += (80 - pres) * 0.03
+        if oil < 30: acceleration += (30 - oil) * 0.04
+        
+        adjusted_rul = max(1.0, round(base_rul / acceleration, 1))
+        lower_bound = max(0.5, round(adjusted_rul * 0.75, 1))
+        upper_bound = round(adjusted_rul * 1.25, 1)
+        
+        return {
+            "rul_hours": adjusted_rul,
+            "status": "Critical" if adjusted_rul < 12 else "Warning",
+            "confidence_range": f"{lower_bound} - {upper_bound} hrs"
+        }
+
+    def generate_decision_matrix(self, fault_code: int, sensor_data: Dict, confidence: float = 0.85) -> List[Dict]:
+        """Generate 3 prescriptive operational decision options post-diagnosis."""
+        rul = self.calculate_rul_hours(fault_code, sensor_data, confidence)["rul_hours"]
+        
+        if fault_code == 0:
+            return [
+                {
+                    "id": "opt_routine",
+                    "title": "Continue Normal Operation",
+                    "tag": "RECOMMENDED CHOICE",
+                    "risk_score": 5,
+                    "production_impact": 0,
+                    "est_downtime": "0 hrs",
+                    "action_steps": ["Maintain standard operating load", "Log telemetry data every shift"],
+                    "tradeoff": "Lowest operational disruption; zero immediate cost."
+                },
+                {
+                    "id": "opt_preventive_check",
+                    "title": "Schedule Preventive Calibration",
+                    "tag": "OPTIONAL",
+                    "risk_score": 2,
+                    "production_impact": 10,
+                    "est_downtime": "1 hr",
+                    "action_steps": ["Inspect sensor alignment during next scheduled window"],
+                    "tradeoff": "Minor planned downtime to verify baseline."
+                }
+            ]
+            
+        fault_name = self.fault_profiles.get(fault_code, {}).get("name", "Detected Fault")
+        
+        # Option 1: Emergency Shutdown
+        opt1 = {
+            "id": "opt_shutdown",
+            "title": "Emergency Shutdown & Immediate Repair",
+            "tag": "MAX SAFETY",
+            "risk_score": 2,
+            "production_impact": 100,
+            "est_downtime": self.fault_profiles.get(fault_code, {}).get("estimated_downtime", "4-8 hrs"),
+            "action_steps": [
+                "Immediately trip main pump breaker and apply lockout/tagout.",
+                "Deploy lead technician to inspect components and replace worn parts.",
+                "Conduct full system pressure and vibration test prior to restart."
+            ],
+            "tradeoff": "Eliminates catastrophic failure risk; causes immediate production halt."
+        }
+        
+        # Option 2: Capacity Derating / Load Reduction (Recommended if RUL > 4 hrs)
+        opt2 = {
+            "id": "opt_derate",
+            "title": "Derate Operating Capacity (Reduce Load 30%)",
+            "tag": "RECOMMENDED CHOICE",
+            "risk_score": 18,
+            "production_impact": 30,
+            "est_downtime": "2-4 hrs (scheduled shift end)",
+            "action_steps": [
+                f"Throttle RPM from {sensor_data.get('RPM', 1500)} to {int(sensor_data.get('RPM', 1500)*0.7)} RPM.",
+                "Enable continuous thermal and vibration threshold alerts.",
+                f"Stage replacement parts and execute repair within next {rul} hours."
+            ],
+            "tradeoff": "Keeps 70% production active while extending RUL and preventing runaway thermal buildup."
+        }
+        
+        # Option 3: Monitored Run to Shift End
+        opt3 = {
+            "id": "opt_monitored_run",
+            "title": "Managed Continuous Run with Automated Trip",
+            "tag": "HIGH RISK",
+            "risk_score": 65 if rul > 10 else 88,
+            "production_impact": 0,
+            "est_downtime": "0 hrs (Immediate)",
+            "action_steps": [
+                "Maintain current throughput with automated emergency trip threshold armed.",
+                "Station field technician on site for manual override.",
+                "Initiate immediate part procurement."
+            ],
+            "tradeoff": "Zero immediate production loss, but carries elevated risk of severe component destruction if temperature/vibration spikes."
+        }
+        
+        if fault_code in [2, 3] and confidence > 0.90:
+            opt1["tag"] = "RECOMMENDED CHOICE"
+            opt2["tag"] = "DE-PRIORITIZED"
+            
+        return [opt1, opt2, opt3]
+
+    def analyze_cascading_risks(self, sensor_data: Dict, fault_code: int) -> List[Dict]:
+        """Analyze multi-sensor compound risk interactions and potential domino failures."""
+        cascading_chains = []
+        temp = sensor_data.get("Temperature_C", 70)
+        pres = sensor_data.get("Pressure_psi", 100)
+        vib = sensor_data.get("Vibration_g", 0.02)
+        oil = sensor_data.get("Oil_Level_pct", 60)
+        leak = sensor_data.get("Coolant_Leak", 0)
+        
+        if temp > 85 and vib > 0.03:
+            cascading_chains.append({
+                "chain": "Thermal Expansion → Bearing Clearance Collapse → Shaft Seizure",
+                "risk_severity": "Critical",
+                "probability": "85%",
+                "mitigation": "Reduce operating speed immediately to allow thermal dissipation."
+            })
+            
+        if pres < 85 and oil < 40:
+            cascading_chains.append({
+                "chain": "Oil Loss → Pump Cavitation → Hydraulic Line Pressure Drop",
+                "risk_severity": "High",
+                "probability": "78%",
+                "mitigation": "Top up hydraulic oil reservoir and inspect suction line seals."
+            })
+            
+        if leak == 1 and temp > 80:
+            cascading_chains.append({
+                "chain": "Coolant Depletion → Loss of Heat Dissipation → Thermal Runaway",
+                "risk_severity": "Critical",
+                "probability": "92%",
+                "mitigation": "Isolate coolant loop and check heat exchanger gaskets."
+            })
+            
+        if not cascading_chains:
+            cascading_chains.append({
+                "chain": "Single-Point Degraded State → Accelerated Wear",
+                "risk_severity": "Low" if fault_code == 0 else "Medium",
+                "probability": "25%",
+                "mitigation": "Follow primary preventive maintenance recommendations."
+            })
+            
+        return cascading_chains
+
+    def generate_root_cause_analysis(self, fault_code: int, sensor_data: Dict) -> List[Dict]:
+        """Generate ranked probable root causes with verification procedures."""
+        root_causes = {
+            0: [
+                {"cause": "Normal Operational Wear", "confidence": "98%", "verification": "Routine inspection during scheduled maintenance."}
+            ],
+            1: [
+                {"cause": "Blocked Cooling Radiator / Heat Exchanger", "confidence": "55%", "verification": "Check radiator fins for dust accumulation and measure coolant inlet/outlet delta-T."},
+                {"cause": "Pump Bearing Thermal Overload / Degradation", "confidence": "30%", "verification": "Inspect bearing housing with thermal camera and check for lubricant discoloration."},
+                {"cause": "Stuck Thermostatic Valve", "confidence": "15%", "verification": "Verify valve position switch status and bypass flow."}
+            ],
+            2: [
+                {"cause": "Shaft Misalignment / Coupling Wear", "confidence": "50%", "verification": "Check laser alignment metrics and inspect flexible coupling inserts."},
+                {"cause": "Bearing Raceway Pitting or Fatigue", "confidence": "35%", "verification": "Perform FFT vibration frequency spectrum analysis to isolate inner/outer race pass frequency."},
+                {"cause": "Loose Foundation Bolt / Structural Resonance", "confidence": "15%", "verification": "Torque foundation fasteners to specification."}
+            ],
+            3: [
+                {"cause": "Hydraulic Pump Seal / Internal Leakage", "confidence": "60%", "verification": "Perform pressure decay test and inspect pump drain line for excessive bypass."},
+                {"cause": "Pressure Relief Valve Malfunction", "confidence": "25%", "verification": "Test relief valve cracking pressure against specification."},
+                {"cause": "Suction Strainer Blockage", "confidence": "15%", "verification": "Check suction differential pressure indicator."}
+            ],
+            4: [
+                {"cause": "Shaft Seal Leakage", "confidence": "65%", "verification": "Inspect pump shaft gland for active oil weeping."},
+                {"cause": "Drain Plug or Gasket Degradation", "confidence": "25%", "verification": "Check sump drain plug torque and sealing washer."},
+                {"cause": "Excessive Oil Consumption via Blowby", "confidence": "10%", "verification": "Check crankcase breather for oil mist."}
+            ],
+            5: [
+                {"cause": "Coolant Line Hose Rupture or Clamp Failure", "confidence": "70%", "verification": "Pressurize coolant circuit and visually inspect hose fittings."},
+                {"cause": "Heat Exchanger Tube Leak", "confidence": "20%", "verification": "Sample hydraulic oil for water contamination."},
+                {"cause": "Pump Body Mechanical Crack", "confidence": "10%", "verification": "Perform dye penetrant test on casting."}
+            ]
+        }
+        return root_causes.get(fault_code, root_causes[0])
+
     def generate_recommendations(self, fault_code: int, sensor_data: Dict, 
                                 confidence: float = 0.85) -> Dict:
         """
@@ -251,6 +442,10 @@ class AIRecommendationEngine:
         """
         fault_profile = self.fault_profiles.get(fault_code, self.fault_profiles[0])
         analysis = self.analyze_sensor_data(sensor_data)
+        rul_info = self.calculate_rul_hours(fault_code, sensor_data, confidence)
+        decision_matrix = self.generate_decision_matrix(fault_code, sensor_data, confidence)
+        cascading_risks = self.analyze_cascading_risks(sensor_data, fault_code)
+        root_causes = self.generate_root_cause_analysis(fault_code, sensor_data)
         
         recommendations = {
             "fault_code": fault_code,
@@ -268,7 +463,11 @@ class AIRecommendationEngine:
             "spare_parts": self._suggest_spare_parts(fault_code),
             "technician_notes": self._generate_technician_notes(fault_code, sensor_data),
             "cost_estimate": self._estimate_maintenance_cost(fault_code),
-            "urgency_level": self._determine_urgency(fault_code, analysis["risk_assessment"])
+            "urgency_level": self._determine_urgency(fault_code, analysis["risk_assessment"]),
+            "rul_info": rul_info,
+            "decision_matrix": decision_matrix,
+            "cascading_risks": cascading_risks,
+            "root_causes": root_causes
         }
         
         return recommendations

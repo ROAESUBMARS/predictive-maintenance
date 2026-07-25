@@ -65,7 +65,12 @@ def test_predict_overheating(client):
     assert data["fault_code"] == 1
     assert "Overheating" in data["fault"]
 
-def test_chat_unconfigured(client):
+def test_chat_unconfigured(client, monkeypatch):
+    import dotenv
+    monkeypatch.setattr(dotenv, "load_dotenv", lambda **k: None)
+    monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("AZURE_OPENAI_API_KEY", raising=False)
     payload = {
         "messages": [],
         "sensor_data": {},
@@ -206,12 +211,12 @@ def test_rate_limiter(client, tech_token):
     }
     headers = {"Authorization": f"Bearer {tech_token}"}
     
-    # Make 10 successful requests
-    for i in range(10):
+    # Make 120 successful requests
+    for i in range(120):
         response = client.post("/predict", json=payload, headers=headers)
         assert response.status_code != 429
         
-    # The 11th request must be rate-limited and return 429
+    # The 121st request must be rate-limited and return 429
     response = client.post("/predict", json=payload, headers=headers)
     assert response.status_code == 429
     assert "Rate limit exceeded" in response.json["error"]
@@ -305,12 +310,12 @@ def test_rate_limiter_recommend(client, tech_token):
     }
     headers = {"Authorization": f"Bearer {tech_token}"}
     
-    # Make 10 successful requests to /recommend
-    for i in range(10):
+    # Make 30 successful requests to /recommend
+    for i in range(30):
         response = client.post("/recommend", json=payload, headers=headers)
         assert response.status_code != 429
         
-    # The 11th request must be rate-limited and return 429
+    # The 31st request must be rate-limited and return 429
     response = client.post("/recommend", json=payload, headers=headers)
     assert response.status_code == 429
 
@@ -322,14 +327,39 @@ def test_rate_limiter_schedule(client, tech_token):
     }
     headers = {"Authorization": f"Bearer {tech_token}"}
     
-    # Make 10 successful requests to /schedule
-    for i in range(10):
+    # Make 120 successful requests to /schedule
+    for i in range(120):
         response = client.post("/schedule", json=payload, headers=headers)
         assert response.status_code != 429
         
-    # The 11th request must be rate-limited and return 429
+    # The 121st request must be rate-limited and return 429
     response = client.post("/schedule", json=payload, headers=headers)
     assert response.status_code == 429
+
+def test_post_diagnostic_decision_matrix(client, tech_token):
+    payload = {
+        "Temperature_C": 96,
+        "Pressure_psi": 125,
+        "Vibration_g": 0.05,
+        "Flow_Rate_lpm": 280,
+        "Oil_Level_pct": 55,
+        "RPM": 1600,
+        "Coolant_Leak": 0,
+        "Operating_Hours": 240
+    }
+    headers = {"Authorization": f"Bearer {tech_token}"}
+    response = client.post("/predict", json=payload, headers=headers)
+    assert response.status_code == 200
+    data = response.json
+    ai = data["ai_recommendation"]
+    
+    assert "rul_info" in ai
+    assert "rul_hours" in ai["rul_info"]
+    assert "decision_matrix" in ai
+    assert len(ai["decision_matrix"]) >= 2
+    assert "root_causes" in ai
+    assert len(ai["root_causes"]) >= 1
+    assert "cascading_risks" in ai
 
 def test_alert_email_matching_check(client, tech_token):
     payload = {

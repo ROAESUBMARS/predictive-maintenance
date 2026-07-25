@@ -566,6 +566,43 @@
                                         <p>No immediate maintenance required.</p>
                                     </div>
                                 </div>
+
+                                <!-- Post-Diagnostic Prescriptive Decision Matrix Hub -->
+                                <div class="decision-hub-card glass-card" id="decision-hub-panel" style="margin-bottom:20px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                                        <h3 style="margin:0;"><i class="fa-solid fa-code-fork" style="color:var(--accent);"></i> Decision Strategy Matrix</h3>
+                                        <span id="rul-badge" class="badge" style="background:rgba(88,166,255,0.15); color:var(--accent); font-weight:700;">RUL: 720.0 hrs</span>
+                                    </div>
+                                    
+                                    <!-- Remaining Useful Life Gauge Bar -->
+                                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:16px;">
+                                        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;">
+                                            <span style="color:var(--text-secondary);">Remaining Useful Life (RUL) Meter</span>
+                                            <strong id="rul-hours-text" style="color:var(--text-primary);">720 hrs (Nominal)</strong>
+                                        </div>
+                                        <div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;">
+                                            <div id="rul-progress-bar" style="width:100%; height:100%; background:var(--success); transition:all 0.5s ease;"></div>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-secondary); margin-top:4px;">
+                                            <span>Immediate Failure</span>
+                                            <span id="rul-confidence-range">Est: 650-800 hrs</span>
+                                            <span>Nominal (700+ hrs)</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Interactive Decision Options Cards -->
+                                    <div id="decision-options-container" style="display:flex; flex-direction:column; gap:12px;">
+                                        <div style="color:var(--text-secondary); font-size:12px;">Run diagnostic to generate prescriptive operational decision strategies.</div>
+                                    </div>
+
+                                    <!-- Root Cause & Cascading Risk Section -->
+                                    <div style="margin-top:16px; border-top:1px solid var(--card-border); padding-top:14px;">
+                                        <h4 style="font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-secondary); margin-bottom:10px;"><i class="fa-solid fa-microscope"></i> Root Cause Isolation</h4>
+                                        <div id="root-causes-container" style="font-size:12px; color:var(--text-primary);">
+                                            <p style="color:var(--text-secondary); margin:0;">Root cause isolation analysis will display here after diagnostic.</p>
+                                        </div>
+                                    </div>
+                                </div>
                                 
                                 <!-- Intelligent Maintenance Planner Panel -->
                                 <div class="scheduler-card glass-card" id="scheduler-panel" style="margin-bottom:20px;">
