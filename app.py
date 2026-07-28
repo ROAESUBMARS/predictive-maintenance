@@ -245,6 +245,135 @@ def rule_based_classify(d):
     return 0
 
 
+PROCUREMENT_PARTS_CATALOG = {
+    0: [],
+    1: [
+        {"part_number": "CF-9942", "name": "Cooling Fan Assembly", "quantity": 1, "lead_time_days": 3, "unit_cost": 180.0},
+        {"part_number": "GK-1044", "name": "High-Temp Gaskets", "quantity": 2, "lead_time_days": 2, "unit_cost": 45.0},
+        {"part_number": "TS-402", "name": "Thermal Sensor Probe", "quantity": 1, "lead_time_days": 1, "unit_cost": 65.0},
+    ],
+    2: [
+        {"part_number": "BRG-6210", "name": "Replacement Roller Bearings", "quantity": 2, "lead_time_days": 5, "unit_cost": 120.0},
+        {"part_number": "SLK-882", "name": "Bearing Seal Kit", "quantity": 1, "lead_time_days": 2, "unit_cost": 35.0},
+        {"part_number": "VIM-400", "name": "Vibration Isolation Mounts", "quantity": 4, "lead_time_days": 3, "unit_cost": 70.0},
+    ],
+    3: [
+        {"part_number": "HPS-3310", "name": "High-Pressure Seal Kit", "quantity": 1, "lead_time_days": 4, "unit_cost": 210.0},
+        {"part_number": "PRV-880", "name": "Pressure Relief Valve", "quantity": 1, "lead_time_days": 5, "unit_cost": 290.0},
+        {"part_number": "HHA-12B", "name": "Hydraulic Hose Assembly", "quantity": 2, "lead_time_days": 2, "unit_cost": 85.0},
+    ],
+    4: [
+        {"part_number": "OIL-ISO46", "name": "Synthetic ISO 46 Oil (20L)", "quantity": 2, "lead_time_days": 1, "unit_cost": 75.0},
+        {"part_number": "OSG-120", "name": "Oil Sump Gasket", "quantity": 1, "lead_time_days": 2, "unit_cost": 25.0},
+        {"part_number": "OFE-500", "name": "Oil Filter Element", "quantity": 1, "lead_time_days": 1, "unit_cost": 30.0},
+    ],
+    5: [
+        {"part_number": "CHA-771", "name": "Coolant Hose Assembly", "quantity": 1, "lead_time_days": 2, "unit_cost": 60.0},
+        {"part_number": "MPS-901", "name": "Mechanical Pump Seal", "quantity": 1, "lead_time_days": 4, "unit_cost": 140.0},
+        {"part_number": "SFC-200", "name": "System Flush Chemical (5L)", "quantity": 1, "lead_time_days": 1, "unit_cost": 40.0},
+    ],
+}
+
+
+def generate_suggested_procurement(rul_hours: float, fault_code: int, sensor_data: dict = None, threshold_hours: float = 48.0) -> dict:
+    """
+    Predictive parts & inventory engine rule function.
+    Evaluates RUL output against threshold and generates a suggested procurement work order
+    with parts list and lead-time warning.
+    """
+    try:
+        rul_hours = float(rul_hours)
+    except (ValueError, TypeError):
+        rul_hours = 720.0
+
+    try:
+        fault_code = int(fault_code)
+    except (ValueError, TypeError):
+        fault_code = 0
+
+    sensor_data = sensor_data or {}
+    try:
+        threshold_hours = float(threshold_hours)
+    except (ValueError, TypeError):
+        threshold_hours = 48.0
+
+    procurement_required = (rul_hours <= threshold_hours) and (fault_code != 0)
+
+    if not procurement_required:
+        return {
+            "procurement_required": False,
+            "threshold_hours": threshold_hours,
+            "rul_hours": rul_hours,
+            "fault_code": fault_code,
+            "message": f"RUL ({rul_hours} hrs) is above procurement threshold ({threshold_hours} hrs) or system is nominal.",
+            "parts_list": [],
+            "lead_time_warning": None,
+            "suggested_work_order": None
+        }
+
+    parts = PROCUREMENT_PARTS_CATALOG.get(fault_code, PROCUREMENT_PARTS_CATALOG[2])
+    
+    max_lead_time_days = max([p["lead_time_days"] for p in parts]) if parts else 0
+    max_lead_time_hours = max_lead_time_days * 24.0
+    
+    total_cost = sum(p["quantity"] * p["unit_cost"] for p in parts)
+    
+    critical_part = max(parts, key=lambda x: x["lead_time_days"]) if parts else {"name": "Required Parts", "lead_time_days": 0}
+
+    if max_lead_time_hours >= rul_hours:
+        lead_time_warning = (
+            f"⚠️ CRITICAL LEAD-TIME WARNING: Longest part lead time ({critical_part['name']}: {critical_part['lead_time_days']} days / {max_lead_time_hours:.0f} hrs) "
+            f"EXCEEDS estimated Remaining Useful Life ({rul_hours:.1f} hrs)! Immediate expedited procurement required to avoid unscheduled breakdown."
+        )
+        priority = "Critical"
+    else:
+        lead_time_warning = (
+            f"⚠️ URGENT LEAD-TIME WARNING: RUL has dropped to {rul_hours:.1f} hrs below threshold ({threshold_hours:.0f} hrs). "
+            f"Part lead time is {critical_part['lead_time_days']} days for '{critical_part['name']}'. Place order now to ensure parts arrive before failure window."
+        )
+        priority = "High" if rul_hours < 24 else "Medium"
+
+    fault_name = FAULT_INFO.get(fault_code, {}).get("fault", "Detected Fault")
+    wo_id = f"SWO-PROC-{fault_code}{int(rul_hours):03d}"
+
+    suggested_work_order = {
+        "wo_id": wo_id,
+        "title": f"Procurement & Replacement Work Order — {fault_name}",
+        "priority": priority,
+        "suggested_assignee": "Tech: Sarah Jenkins",
+        "target_equipment": "HPU-01 Industrial Hydraulic Power Unit Skid",
+        "fault_name": fault_name,
+        "fault_code": fault_code,
+        "rul_hours": rul_hours,
+        "threshold_hours": threshold_hours,
+        "parts_list": parts,
+        "total_estimated_cost": f"${total_cost:,.2f}",
+        "est_lead_time": f"{max_lead_time_days} days",
+        "est_repair_hours": 4,
+        "lead_time_warning": lead_time_warning,
+        "action_steps": [
+            f"1. Issue purchase requisition for parts list ({len(parts)} line items).",
+            f"2. Contact supplier to expedite delivery of critical component ({critical_part['name']}).",
+            "3. Stage replacement tools and schedule technician maintenance window.",
+            "4. Execute component swap upon delivery and verify calibration."
+        ]
+    }
+
+    return {
+        "procurement_required": True,
+        "threshold_hours": threshold_hours,
+        "rul_hours": rul_hours,
+        "fault_code": fault_code,
+        "fault_name": fault_name,
+        "lead_time_warning": lead_time_warning,
+        "max_lead_time_days": max_lead_time_days,
+        "total_estimated_cost": f"${total_cost:,.2f}",
+        "parts_list": parts,
+        "suggested_work_order": suggested_work_order
+    }
+
+
+
 def _parse_sensor_payload(data: dict) -> dict:
     """Validate and normalise incoming sensor JSON into a clean payload dict."""
     return {
@@ -366,9 +495,14 @@ def predict():
 
         contributions = _get_feature_contributions(payload)
 
+        # Compute suggested procurement if RUL drops below threshold
+        rul_val = rec.get("rul_info", {}).get("rul_hours", 720.0)
+        procurement_info = generate_suggested_procurement(rul_val, fault_code, payload)
+
         return jsonify({
             # Original fields (backwards-compatible)
             "fault_code":      fault_code,
+            "fault_name":      result["fault"],
             "fault":           result["fault"],
             "recommendation":  result["recommendation"],
             "severity":        result["severity"],
@@ -376,6 +510,7 @@ def predict():
             "inputs":          payload,
             "probabilities":   proba,
             "feature_contributions": contributions,
+            "suggested_procurement": procurement_info,
             # Rich AI recommendation fields
             "ai_recommendation": {
                 "fault_name":         rec["fault_name"],
@@ -397,6 +532,7 @@ def predict():
                 "cascading_risks":   rec.get("cascading_risks", []),
                 "root_causes":        rec.get("root_causes", []),
                 "urgency_score_info": rec.get("urgency_score_info", {}),
+                "suggested_procurement": procurement_info,
             }
         })
 
@@ -476,6 +612,10 @@ def recommend():
                     to_phone=alert_phone
                 )
 
+        # Compute suggested procurement if RUL drops below threshold
+        rul_val = rec.get("rul_info", {}).get("rul_hours", 720.0)
+        procurement_info = generate_suggested_procurement(rul_val, fault_code, payload)
+
         return jsonify({
             "fault_code":          rec["fault_code"],
             "fault_name":          rec["fault_name"],
@@ -498,8 +638,44 @@ def recommend():
             "cascading_risks":   rec.get("cascading_risks", []),
             "root_causes":        rec.get("root_causes", []),
             "urgency_score_info": rec.get("urgency_score_info", {}),
+            "suggested_procurement": procurement_info,
         })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
+
+@app.route("/api/procurement", methods=["POST"])
+@rate_limit(limit=120, period=60)
+def api_procurement():
+    """
+    Predictive parts & inventory engine endpoint.
+    Accepts JSON body with RUL hours, fault code, sensor data, and optional threshold.
+    Returns auto-generated suggested procurement work order with parts list and lead-time warning.
+    """
+    data = request.get_json() or {}
+    try:
+        rul_hours = data.get("rul_hours")
+        fault_code = data.get("fault_code")
+        sensor_data = data.get("sensor_data", {})
+        threshold_hours = data.get("threshold_hours", 48.0)
+
+        # If RUL/fault_code are missing, derive them from sensor_data if provided
+        if (rul_hours is None or fault_code is None) and sensor_data:
+            payload = _parse_sensor_payload(sensor_data)
+            fc, conf, _ = _run_prediction(payload)
+            if fault_code is None:
+                fault_code = fc
+            rec = rec_engine.generate_recommendations(fault_code, payload, conf)
+            if rul_hours is None:
+                rul_hours = rec.get("rul_info", {}).get("rul_hours", 720.0)
+
+        if rul_hours is None:
+            rul_hours = 720.0
+        if fault_code is None:
+            fault_code = 0
+
+        res = generate_suggested_procurement(rul_hours, fault_code, sensor_data, threshold_hours)
+        return jsonify(res)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

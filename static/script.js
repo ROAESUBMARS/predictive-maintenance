@@ -1048,6 +1048,10 @@ function updateDashboard(result, schedResult) {
     renderSchedulerView(schedResult);
     renderReliabilitySchedulerView(schedResult);
 
+    // Render Predictive Parts & Inventory Engine card
+    const procurementData = result.suggested_procurement || (result.ai_recommendation ? result.ai_recommendation.suggested_procurement : null);
+    renderProcurementView(procurementData);
+
     // Update Prediction Analysis Charts
     if (result.probabilities && probabilityChart) {
         probabilityChart.data.datasets[0].data = result.probabilities;
@@ -1773,4 +1777,112 @@ function formatMarkdown(text) {
     html = html.replace(/<\/ul><ul>/g, ''); 
     
     return html;
+}
+
+/* ═══════════════════════════ PREDICTIVE PARTS & INVENTORY ENGINE ═══════════════════════════ */
+let currentProcurementData = null;
+
+function renderProcurementView(procurementData) {
+    currentProcurementData = procurementData;
+    const warningBanner = document.getElementById('procurement-warning-banner');
+    const placeholder = document.getElementById('procurement-placeholder');
+    const detailsContainer = document.getElementById('procurement-details');
+    const badge = document.getElementById('procurement-status-badge');
+    const swoTitle = document.getElementById('procurement-swo-title');
+    const priorityBadge = document.getElementById('procurement-priority-badge');
+    const partsTbody = document.getElementById('procurement-parts-tbody');
+    const totalCostEl = document.getElementById('procurement-total-cost');
+
+    if (!procurementData || !procurementData.procurement_required) {
+        if (warningBanner) warningBanner.style.display = 'none';
+        if (detailsContainer) detailsContainer.style.display = 'none';
+        if (placeholder) {
+            placeholder.style.display = 'block';
+            const rulHours = procurementData ? procurementData.rul_hours : 720.0;
+            placeholder.textContent = `No active procurement required. RUL is nominal (${rulHours} hrs). Parts engine actively monitoring failure threshold (48.0 hrs).`;
+        }
+        if (badge) {
+            badge.textContent = 'Nominal RUL';
+            badge.style.background = 'rgba(63, 185, 80, 0.15)';
+            badge.style.color = 'var(--success)';
+        }
+        return;
+    }
+
+    if (badge) {
+        badge.textContent = `RUL Triggered (${procurementData.rul_hours} hrs)`;
+        badge.style.background = 'rgba(248, 81, 73, 0.15)';
+        badge.style.color = 'var(--danger)';
+    }
+
+    if (placeholder) placeholder.style.display = 'none';
+
+    // Render lead-time warning banner
+    if (warningBanner) {
+        warningBanner.style.display = 'block';
+        warningBanner.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${procurementData.lead_time_warning}`;
+    }
+
+    // Render details
+    if (detailsContainer) detailsContainer.style.display = 'block';
+
+    const swo = procurementData.suggested_work_order || {};
+    if (swoTitle) swoTitle.textContent = `${swo.wo_id || 'SWO-PROC'} — ${swo.title || 'Suggested Procurement Work Order'}`;
+    
+    if (priorityBadge) {
+        priorityBadge.textContent = `${swo.priority || 'HIGH'} PRIORITY`;
+        if (swo.priority === 'Critical') {
+            priorityBadge.style.background = 'rgba(248, 81, 73, 0.2)';
+            priorityBadge.style.color = 'var(--danger)';
+        } else {
+            priorityBadge.style.background = 'rgba(245, 158, 11, 0.2)';
+            priorityBadge.style.color = 'var(--warning)';
+        }
+    }
+
+    if (totalCostEl) totalCostEl.textContent = procurementData.total_estimated_cost || '$0.00';
+
+    if (partsTbody) {
+        partsTbody.innerHTML = '';
+        const parts = procurementData.parts_list || [];
+        if (parts.length === 0) {
+            partsTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary); padding:8px;">No specific parts cataloged.</td></tr>`;
+        } else {
+            parts.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding:6px 0;">
+                        <strong style="color:var(--text-primary); display:block;">${p.name}</strong>
+                        <span style="font-size:10px; color:var(--text-secondary);">Cat #: ${p.part_number}</span>
+                    </td>
+                    <td style="text-align:center; padding:6px 0;">${p.quantity}</td>
+                    <td style="text-align:center; padding:6px 0;">
+                        <span class="badge" style="background:rgba(88,166,255,0.1); color:var(--accent); font-size:10px;">${p.lead_time_days} days</span>
+                    </td>
+                    <td style="text-align:right; padding:6px 0; color:var(--text-primary);">$${(p.quantity * p.unit_cost).toFixed(2)}</td>
+                `;
+                partsTbody.appendChild(tr);
+            });
+        }
+    }
+}
+
+function autoFillProcurementWorkOrder() {
+    if (!currentProcurementData || !currentProcurementData.suggested_work_order) {
+        showToast('No active suggested procurement available to fill.', 'warning');
+        return;
+    }
+
+    const swo = currentProcurementData.suggested_work_order;
+    const assigneeSelect = document.getElementById('wo-assignee');
+    const prioritySelect = document.getElementById('wo-priority');
+    const hoursInput = document.getElementById('wo-est-hours');
+    const daysInput = document.getElementById('wo-est-days');
+
+    if (assigneeSelect) assigneeSelect.value = swo.suggested_assignee || "Tech: Sarah Jenkins";
+    if (prioritySelect) prioritySelect.value = swo.priority === "Critical" ? "Critical" : "High";
+    if (hoursInput) hoursInput.value = swo.est_repair_hours || 4;
+    if (daysInput) daysInput.value = swo.max_lead_time_days || 2;
+
+    showToast(`Work Order details populated from Suggested Procurement (WO: <strong>${swo.wo_id}</strong>)! Review and click 'Generate Work Order'.`, 'info', 5000);
 }

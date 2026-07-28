@@ -394,6 +394,63 @@ def test_alert_email_matching_check(client, tech_token):
     assert "Forbidden" in response.json["error"]
 
 
+def test_procurement_nominal_rul(client):
+    payload = {
+        "rul_hours": 720.0,
+        "fault_code": 0,
+        "threshold_hours": 48.0
+    }
+    headers = {"Authorization": "Bearer admin"}
+    response = client.post("/api/procurement", json=payload, headers=headers)
+    assert response.status_code == 200
+    data = response.json
+    assert data["procurement_required"] is False
+    assert data["suggested_work_order"] is None
+
+
+def test_procurement_low_rul_trigger(client, tech_token):
+    # Test low RUL via /predict with overheating fault
+    payload = {
+        "Temperature_C": 95,
+        "Pressure_psi": 120,
+        "Vibration_g": 0.02,
+        "Flow_Rate_lpm": 300,
+        "Oil_Level_pct": 60,
+        "RPM": 1500,
+        "Coolant_Leak": 0,
+        "Operating_Hours": 100
+    }
+    headers = {"Authorization": f"Bearer {tech_token}"}
+    response = client.post("/predict", json=payload, headers=headers)
+    assert response.status_code == 200
+    data = response.json
+    assert "suggested_procurement" in data
+    sp = data["suggested_procurement"]
+    assert sp["procurement_required"] is True
+    assert sp["rul_hours"] < 48.0
+    assert len(sp["parts_list"]) >= 1
+    assert "lead_time_warning" in sp
+    assert sp["suggested_work_order"]["wo_id"].startswith("SWO-PROC-")
+
+
+def test_api_procurement_custom_threshold(client):
+    # Test custom threshold of 100.0 hours
+    payload = {
+        "rul_hours": 75.0,
+        "fault_code": 2,
+        "threshold_hours": 100.0
+    }
+    headers = {"Authorization": "Bearer admin"}
+    response = client.post("/api/procurement", json=payload, headers=headers)
+    assert response.status_code == 200
+    data = response.json
+    assert data["procurement_required"] is True
+    assert data["threshold_hours"] == 100.0
+    assert len(data["parts_list"]) >= 1
+    assert "Replacement Roller Bearings" in [p["name"] for p in data["parts_list"]]
+
+
+
 
 
 
