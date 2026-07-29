@@ -103,4 +103,4 @@ A strategy-level dashboard for asset life-cycle evaluation and ML validation.
 * **ML Model Monitor:** View the active accuracy score and precision/recall stats. If drift is detected, click **Trigger Model Retraining** to retrain the underlying ML model.
 * **Remaining Useful Life (RUL) Forecast:** Review future projections for pump failures (e.g., cycles remaining) to plan capital replacements.
 * **Weibull Distribution:** Analyze failure probabilities plotted over cycles on the Failure Distribution area chart.
-* **Reports Export:** Export data sheets, PDF reports, or generate ISO 14224 benchmarking audits.
+* **Reports & ERP Audit Export:** Export telemetry datasheets, PDF executive summaries, ISO 14224 failure metrics, or generate structured audit packages formatted for Classification Societies (DNV, Lloyd's Register, ABS) and Enterprise ERP systems (SAP PM, AMOS).

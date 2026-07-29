@@ -512,6 +512,56 @@ def test_api_cii_emissions_endpoint(client):
     assert "decarbonization_action" in data
 
 
+def test_ot_security_anomaly_detection(client, tech_token):
+    # Test valid sensor telemetry payload
+    valid_payload = {
+        "Temperature_C": 75.0,
+        "Pressure_psi": 110.0,
+        "Vibration_g": 0.02,
+        "Flow_Rate_lpm": 300.0,
+        "Oil_Level_pct": 65.0,
+        "RPM": 1500.0,
+        "Coolant_Leak": 0,
+        "Operating_Hours": 120.0
+    }
+    headers = {"Authorization": f"Bearer {tech_token}"}
+    response = client.post("/predict", json=valid_payload, headers=headers)
+    assert response.status_code == 200
+    data = response.json
+    assert "ot_security" in data
+    assert data["ot_security"]["is_valid"] is True
+
+    # Test anomalous spoofed telemetry (Temperature 999 C - physically impossible)
+    anomalous_payload = {
+        "Temperature_C": 999.0,
+        "Pressure_psi": 100.0,
+        "Vibration_g": 0.02,
+        "Flow_Rate_lpm": 300.0,
+        "Oil_Level_pct": 60.0,
+        "RPM": 1500.0,
+        "Coolant_Leak": 0,
+        "Operating_Hours": 100.0
+    }
+    response = client.post("/predict", json=anomalous_payload, headers=headers)
+    assert response.status_code == 200
+    data = response.json
+    assert data["ot_security"]["is_valid"] is False
+    assert len(data["ot_security"]["anomalies"]) > 0
+    assert data["ot_security"]["anomalies"][0]["type"] == "OUT_OF_PHYSICAL_BOUNDS"
+
+
+def test_ot_security_status_endpoint(client):
+    headers = {"Authorization": "Bearer admin"}
+    response = client.get("/api/ot-security/status", headers=headers)
+    assert response.status_code == 200
+    data = response.json
+    assert "threat_level" in data
+    assert "packets_scanned" in data
+    assert "anomalies_detected" in data
+    assert "recommendations" in data
+
+
+
 
 
 

@@ -23,6 +23,7 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from ai_recommendation import AIRecommendationEngine
 from alert_service import trigger_fault_alerts
 from maintenance_scheduler import MaintenanceScheduler
+from ot_security import ot_monitor
 
 app = Flask(__name__)
 
@@ -138,6 +139,7 @@ def check_auth():
         token = admin_key
         
     if not token:
+        ot_monitor.record_access_event(request.remote_addr, request.path, success=False, reason="Missing authentication token")
         return jsonify({"error": "Unauthorized: Missing authentication token"}), 401
 
     # Expected API password (default to admin)
@@ -156,6 +158,7 @@ def check_auth():
         g.current_user = data.get("email")
         g.current_role = data.get("role")
     except (SignatureExpired, BadSignature):
+        ot_monitor.record_access_event(request.remote_addr, request.path, success=False, reason="Invalid or expired session token")
         return jsonify({"error": "Unauthorized: Invalid or expired session token"}), 401
 
 
@@ -556,8 +559,15 @@ def health():
         "status": "ok",
         "model_loaded": model is not None,
         "mode": "ml_model" if model else "rule_based",
-        "recommendation_engine": "AIRecommendationEngine v1.0"
+        "recommendation_engine": "AIRecommendationEngine v1.0",
+        "ot_security_status": ot_monitor.threat_level
     })
+
+
+@app.route("/api/ot-security/status", methods=["GET"])
+def ot_security_status():
+    """Returns OT Cybersecurity telemetry anomaly monitor summary and audit log."""
+    return jsonify(ot_monitor.get_security_summary())
 
 
 @app.route("/predict", methods=["POST"])
@@ -574,6 +584,9 @@ def predict():
         return jsonify({"error": "No JSON body received"}), 400
 
     try:
+        # OT Telemetry Cybersecurity & Anomaly Inspection
+        ot_security_check = ot_monitor.inspect_telemetry_payload(data, request.remote_addr)
+
         payload = _parse_sensor_payload(data)
         fault_code, confidence, mode = _run_prediction(payload)
 
@@ -632,6 +645,7 @@ def predict():
             "feature_contributions": contributions,
             "suggested_procurement": procurement_info,
             "cii_emissions": cii_info,
+            "ot_security": ot_security_check,
             # Rich AI recommendation fields
             "ai_recommendation": {
                 "fault_name":         rec["fault_name"],
