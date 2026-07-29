@@ -709,6 +709,74 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Emissions & Decarbonization Compliance Module — IMO CII Tracker -->
+                                <div class="cii-card glass-card" id="cii-tracker-panel" style="margin-bottom:20px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                                        <h3 style="margin:0;"><i class="fa-solid fa-leaf" style="color:var(--success);"></i> IMO Carbon Intensity & Decarbonization Tracker</h3>
+                                        <span id="cii-grade-badge" class="badge" style="background:rgba(63,185,80,0.15); color:var(--success); font-weight:800; font-size:13px;">Grade A — Superior</span>
+                                    </div>
+
+                                    <!-- Compliance Warning Banner -->
+                                    <div id="cii-compliance-warning" style="display:none; background:rgba(248,81,73,0.12); border:1px solid var(--danger); border-radius:8px; padding:12px 14px; margin-bottom:14px; font-size:12px; color:var(--danger); line-height:1.5;">
+                                        <!-- Dynamically populated -->
+                                    </div>
+
+                                    <!-- CII Ratings Scale Bar -->
+                                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:10px; padding:12px 14px; margin-bottom:16px;">
+                                        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:8px;">
+                                            <span style="color:var(--text-secondary);">IMO CII Rating Indicator</span>
+                                            <strong id="cii-label-text" style="color:var(--text-primary);">Grade A — Superior Decarbonization Performance</strong>
+                                        </div>
+                                        <div style="display:flex; height:10px; border-radius:5px; overflow:hidden; gap:2px; background:rgba(255,255,255,0.05);">
+                                            <div id="cii-bar-A" style="flex:1; background:#3fb950; opacity:1;" title="Grade A (0-5% inefficiency)"></div>
+                                            <div id="cii-bar-B" style="flex:1; background:#2ea043; opacity:0.3;" title="Grade B (5-12% inefficiency)"></div>
+                                            <div id="cii-bar-C" style="flex:1; background:#f5a623; opacity:0.3;" title="Grade C (12-22% inefficiency)"></div>
+                                            <div id="cii-bar-D" style="flex:1; background:#f97316; opacity:0.3;" title="Grade D (22-35% inefficiency)"></div>
+                                            <div id="cii-bar-E" style="flex:1; background:#f85149; opacity:0.3;" title="Grade E (>35% inefficiency)"></div>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-secondary); margin-top:6px; font-weight:700;">
+                                            <span style="color:#3fb950;">A (Superior)</span>
+                                            <span style="color:#2ea043;">B (Minor)</span>
+                                            <span style="color:#f5a623;">C (Compliant)</span>
+                                            <span style="color:#f97316;">D (Warning)</span>
+                                            <span style="color:#f85149;">E (Detention Risk)</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Key Metrics Grid -->
+                                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:16px;">
+                                        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--card-border); padding:10px 12px; border-radius:8px;">
+                                            <span style="font-size:10px; color:var(--text-secondary); display:block;">Actual Power Draw</span>
+                                            <strong id="cii-actual-kw" style="font-size:15px; color:var(--text-primary);">45.0 kW</strong>
+                                            <span id="cii-power-delta" style="font-size:10px; color:var(--success); display:block; margin-top:2px;">Baseline (0% excess)</span>
+                                        </div>
+
+                                        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--card-border); padding:10px 12px; border-radius:8px;">
+                                            <span style="font-size:10px; color:var(--text-secondary); display:block;">Fuel Waste Penalty</span>
+                                            <strong id="cii-fuel-waste" style="font-size:15px; color:var(--warning);">$0.00 / day</strong>
+                                            <span id="cii-fuel-monthly" style="font-size:10px; color:var(--text-secondary); display:block; margin-top:2px;">$0.00 / month</span>
+                                        </div>
+
+                                        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--card-border); padding:10px 12px; border-radius:8px;">
+                                            <span style="font-size:10px; color:var(--text-secondary); display:block;">Excess CO₂ Emissions</span>
+                                            <strong id="cii-co2-daily" style="font-size:15px; color:var(--danger);">0.0 kg / day</strong>
+                                            <span id="cii-co2-annual" style="font-size:10px; color:var(--text-secondary); display:block; margin-top:2px;">0.00 tonnes / yr</span>
+                                        </div>
+
+                                        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--card-border); padding:10px 12px; border-radius:8px;">
+                                            <span style="font-size:10px; color:var(--text-secondary); display:block;">Carbon Tax Fine (EU/IMO)</span>
+                                            <strong id="cii-carbon-tax" style="font-size:15px; color:var(--accent);">$0.00 / yr</strong>
+                                            <span style="font-size:10px; color:var(--text-secondary); display:block; margin-top:2px;">@ $95/tonne CO₂</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Prescriptive Decarbonization Action Banner -->
+                                    <div style="background:rgba(88,166,255,0.06); border:1px solid rgba(88,166,255,0.2); border-radius:8px; padding:12px 14px; font-size:12px; color:var(--text-primary); line-height:1.5;">
+                                        <strong style="color:var(--accent); display:block; margin-bottom:4px;"><i class="fa-solid fa-seedling"></i> Decarbonization ROI Action Step:</strong>
+                                        <span id="cii-action-text">Maintain baseline operating conditions. Pump energy consumption and CII rating are fully optimized.</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

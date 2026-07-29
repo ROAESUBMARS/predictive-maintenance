@@ -1052,6 +1052,10 @@ function updateDashboard(result, schedResult) {
     const procurementData = result.suggested_procurement || (result.ai_recommendation ? result.ai_recommendation.suggested_procurement : null);
     renderProcurementView(procurementData);
 
+    // Render IMO CII Carbon Intensity & Decarbonization Tracker
+    const ciiData = result.cii_emissions || (result.ai_recommendation ? result.ai_recommendation.cii_emissions : null);
+    renderCIITrackerView(ciiData);
+
     // Update Prediction Analysis Charts
     if (result.probabilities && probabilityChart) {
         probabilityChart.data.datasets[0].data = result.probabilities;
@@ -1885,4 +1889,74 @@ function autoFillProcurementWorkOrder() {
     if (daysInput) daysInput.value = swo.max_lead_time_days || 2;
 
     showToast(`Work Order details populated from Suggested Procurement (WO: <strong>${swo.wo_id}</strong>)! Review and click 'Generate Work Order'.`, 'info', 5000);
+}
+
+/* ═══════════════════════════ IMO CII DECARBONIZATION ENGINE ═══════════════════════════ */
+function renderCIITrackerView(ciiData) {
+    if (!ciiData) return;
+
+    const gradeBadge = document.getElementById('cii-grade-badge');
+    const labelText = document.getElementById('cii-label-text');
+    const actualKw = document.getElementById('cii-actual-kw');
+    const powerDelta = document.getElementById('cii-power-delta');
+    const fuelWaste = document.getElementById('cii-fuel-waste');
+    const fuelMonthly = document.getElementById('cii-fuel-monthly');
+    const co2Daily = document.getElementById('cii-co2-daily');
+    const co2Annual = document.getElementById('cii-co2-annual');
+    const carbonTax = document.getElementById('cii-carbon-tax');
+    const actionText = document.getElementById('cii-action-text');
+    const warningBanner = document.getElementById('cii-compliance-warning');
+
+    if (gradeBadge) {
+        gradeBadge.textContent = ciiData.cii_label ? ciiData.cii_label.split('—')[0].trim() : `Grade ${ciiData.cii_rating}`;
+        gradeBadge.style.background = ciiData.status_color ? `${ciiData.status_color}25` : 'rgba(63, 185, 80, 0.15)';
+        gradeBadge.style.color = ciiData.status_color || 'var(--success)';
+    }
+
+    if (labelText) labelText.textContent = ciiData.cii_label || 'Grade A — Superior';
+    if (actualKw) actualKw.textContent = `${ciiData.actual_power_kw} kW`;
+
+    if (powerDelta) {
+        if (ciiData.excess_power_kw > 0) {
+            powerDelta.textContent = `+${ciiData.excess_power_kw} kW (+${ciiData.inefficiency_pct}% excess)`;
+            powerDelta.style.color = 'var(--danger)';
+        } else {
+            powerDelta.textContent = 'Baseline (0% excess)';
+            powerDelta.style.color = 'var(--success)';
+        }
+    }
+
+    if (fuelWaste) fuelWaste.textContent = `${ciiData.wasted_fuel_cost_per_day} / day`;
+    if (fuelMonthly) fuelMonthly.textContent = `${ciiData.wasted_fuel_cost_per_month} / month`;
+
+    if (co2Daily) co2Daily.textContent = `${ciiData.excess_co2_kg_per_day} kg / day`;
+    if (co2Annual) co2Annual.textContent = `${ciiData.annual_excess_co2_tonnes} tonnes / yr`;
+
+    if (carbonTax) carbonTax.textContent = `${ciiData.carbon_tax_cost_per_year} / yr`;
+    if (actionText) actionText.textContent = ciiData.decarbonization_action || 'Maintain baseline operating conditions.';
+
+    const grades = ['A', 'B', 'C', 'D', 'E'];
+    grades.forEach(g => {
+        const bar = document.getElementById(`cii-bar-${g}`);
+        if (bar) {
+            if (g === ciiData.cii_rating) {
+                bar.style.opacity = '1';
+                bar.style.transform = 'scaleY(1.3)';
+                bar.style.boxShadow = '0 0 8px currentColor';
+            } else {
+                bar.style.opacity = '0.25';
+                bar.style.transform = 'scaleY(1)';
+                bar.style.boxShadow = 'none';
+            }
+        }
+    });
+
+    if (warningBanner) {
+        if (ciiData.compliance_warning) {
+            warningBanner.style.display = 'block';
+            warningBanner.innerHTML = ciiData.compliance_warning;
+        } else {
+            warningBanner.style.display = 'none';
+        }
+    }
 }

@@ -373,6 +373,125 @@ def generate_suggested_procurement(rul_hours: float, fault_code: int, sensor_dat
     }
 
 
+def calculate_cii_emissions_compliance(sensor_data: dict, fault_code: int, operating_hours: float = 100.0, baseline_kw: float = 45.0) -> dict:
+    """
+    IMO Carbon Intensity Indicator (CII) & Decarbonization Engine.
+    Ties pump mechanical degradation to excess power draw (kW), fuel waste (MGO),
+    CO2 emission penalties (IMO/EU ETS), and IMO CII Rating (Grades A-E).
+    """
+    sensor_data = sensor_data or {}
+    try:
+        fault_code = int(fault_code)
+    except (ValueError, TypeError):
+        fault_code = 0
+
+    temp = sensor_data.get("Temperature_C", 70.0)
+    vib = sensor_data.get("Vibration_g", 0.02)
+    pres = sensor_data.get("Pressure_psi", 100.0)
+    oil = sensor_data.get("Oil_Level_pct", 60.0)
+    coolant_leak = sensor_data.get("Coolant_Leak", 0)
+
+    fault_inefficiency_map = {
+        0: 0.0,
+        1: 0.28,
+        2: 0.35,
+        3: 0.42,
+        4: 0.22,
+        5: 0.30,
+    }
+    base_inefficiency = fault_inefficiency_map.get(fault_code, 0.15)
+
+    dynamic_penalty = 0.0
+    if temp > 80:
+        dynamic_penalty += (temp - 80) * 0.008
+    if vib > 0.03:
+        dynamic_penalty += (vib - 0.03) * 5.0
+    if pres < 85:
+        dynamic_penalty += (85 - pres) * 0.006
+    if oil < 40:
+        dynamic_penalty += (40 - oil) * 0.005
+    if coolant_leak == 1:
+        dynamic_penalty += 0.08
+
+    inefficiency_pct = min(0.75, base_inefficiency + dynamic_penalty) if fault_code != 0 else 0.0
+    actual_power_kw = round(baseline_kw * (1.0 + inefficiency_pct), 2)
+    excess_power_kw = round(actual_power_kw - baseline_kw, 2)
+
+    sfoc_kg_per_kwh = 0.210
+    excess_fuel_kg_per_hr = round(excess_power_kw * sfoc_kg_per_kwh, 2)
+    excess_fuel_kg_per_day = round(excess_fuel_kg_per_hr * 24.0, 1)
+    
+    co2_factor = 3.114
+    excess_co2_kg_per_day = round(excess_fuel_kg_per_day * co2_factor, 1)
+    annual_excess_co2_tonnes = round((excess_co2_kg_per_day * 365.0) / 1000.0, 2)
+
+    fuel_cost_per_kg = 0.75
+    carbon_tax_per_kg_co2 = 0.095
+
+    wasted_fuel_cost_per_day = round(excess_fuel_kg_per_day * fuel_cost_per_kg, 2)
+    wasted_fuel_cost_per_month = round(wasted_fuel_cost_per_day * 30.0, 2)
+    carbon_tax_cost_per_year = round(annual_excess_co2_tonnes * 95.0, 2)
+    total_monthly_financial_penalty = round(wasted_fuel_cost_per_month + (carbon_tax_cost_per_year / 12.0), 2)
+
+    if inefficiency_pct <= 0.05:
+        cii_rating = "A"
+        cii_label = "Grade A — Superior Decarbonization Performance"
+        status_color = "#3fb950"
+    elif inefficiency_pct <= 0.12:
+        cii_rating = "B"
+        cii_label = "Grade B — Minor Energy Degradation"
+        status_color = "#3fb950"
+    elif inefficiency_pct <= 0.22:
+        cii_rating = "C"
+        cii_label = "Grade C — IMO Compliant Margin"
+        status_color = "#f5a623"
+    elif inefficiency_pct <= 0.35:
+        cii_rating = "D"
+        cii_label = "Grade D — Warning: Action Plan Required"
+        status_color = "#f97316"
+    else:
+        cii_rating = "E"
+        cii_label = "Grade E — Critical Non-Compliant / Detention Risk"
+        status_color = "#f85149"
+
+    fault_name = FAULT_INFO.get(fault_code, {}).get("fault", "Nominal Operation")
+
+    if fault_code == 0:
+        decarbonization_action = "Maintain baseline operating conditions. Pump energy consumption and CII rating are fully optimized."
+        compliance_warning = None
+    else:
+        decarbonization_action = (
+            f"Restoring pump baseline (fixing {fault_name}) will eliminate {excess_power_kw} kW excess energy draw, "
+            f"saving ${wasted_fuel_cost_per_month:,.2f}/month in fuel and preventing {annual_excess_co2_tonnes} tonnes of excess CO2 emissions per year."
+        )
+        if cii_rating in ["D", "E"]:
+            compliance_warning = (
+                f"⚠️ IMO COMPLIANCE ALERT: Vessel CII score deteriorated to {cii_rating} due to pump inefficiency (+{inefficiency_pct*100:.1f}% kW draw). "
+                f"IMO MARPOL Annex VI requires a mandatory Ship Energy Efficiency Management Plan (SEEMP III) Plan within 36 months if uncorrected."
+            )
+        else:
+            compliance_warning = None
+
+    return {
+        "cii_rating": cii_rating,
+        "cii_label": cii_label,
+        "status_color": status_color,
+        "baseline_power_kw": baseline_kw,
+        "actual_power_kw": actual_power_kw,
+        "excess_power_kw": excess_power_kw,
+        "inefficiency_pct": round(inefficiency_pct * 100.0, 1),
+        "excess_fuel_kg_per_day": excess_fuel_kg_per_day,
+        "excess_co2_kg_per_day": excess_co2_kg_per_day,
+        "annual_excess_co2_tonnes": annual_excess_co2_tonnes,
+        "wasted_fuel_cost_per_day": f"${wasted_fuel_cost_per_day:,.2f}",
+        "wasted_fuel_cost_per_month": f"${wasted_fuel_cost_per_month:,.2f}",
+        "carbon_tax_cost_per_year": f"${carbon_tax_cost_per_year:,.2f}",
+        "total_monthly_financial_penalty": f"${total_monthly_financial_penalty:,.2f}",
+        "decarbonization_action": decarbonization_action,
+        "compliance_warning": compliance_warning,
+    }
+
+
 
 def _parse_sensor_payload(data: dict) -> dict:
     """Validate and normalise incoming sensor JSON into a clean payload dict."""
@@ -495,9 +614,10 @@ def predict():
 
         contributions = _get_feature_contributions(payload)
 
-        # Compute suggested procurement if RUL drops below threshold
+        # Compute suggested procurement & IMO CII emissions compliance
         rul_val = rec.get("rul_info", {}).get("rul_hours", 720.0)
         procurement_info = generate_suggested_procurement(rul_val, fault_code, payload)
+        cii_info = calculate_cii_emissions_compliance(payload, fault_code)
 
         return jsonify({
             # Original fields (backwards-compatible)
@@ -511,6 +631,7 @@ def predict():
             "probabilities":   proba,
             "feature_contributions": contributions,
             "suggested_procurement": procurement_info,
+            "cii_emissions": cii_info,
             # Rich AI recommendation fields
             "ai_recommendation": {
                 "fault_name":         rec["fault_name"],
@@ -533,6 +654,7 @@ def predict():
                 "root_causes":        rec.get("root_causes", []),
                 "urgency_score_info": rec.get("urgency_score_info", {}),
                 "suggested_procurement": procurement_info,
+                "cii_emissions": cii_info,
             }
         })
 
@@ -612,9 +734,10 @@ def recommend():
                     to_phone=alert_phone
                 )
 
-        # Compute suggested procurement if RUL drops below threshold
+        # Compute suggested procurement & IMO CII emissions compliance
         rul_val = rec.get("rul_info", {}).get("rul_hours", 720.0)
         procurement_info = generate_suggested_procurement(rul_val, fault_code, payload)
+        cii_info = calculate_cii_emissions_compliance(payload, fault_code)
 
         return jsonify({
             "fault_code":          rec["fault_code"],
@@ -639,6 +762,7 @@ def recommend():
             "root_causes":        rec.get("root_causes", []),
             "urgency_score_info": rec.get("urgency_score_info", {}),
             "suggested_procurement": procurement_info,
+            "cii_emissions": cii_info,
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -675,6 +799,32 @@ def api_procurement():
             fault_code = 0
 
         res = generate_suggested_procurement(rul_hours, fault_code, sensor_data, threshold_hours)
+        return jsonify(res)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/cii-emissions", methods=["POST"])
+@rate_limit(limit=120, period=60)
+def api_cii_emissions():
+    """
+    IMO Carbon Intensity Indicator (CII) & Decarbonization endpoint.
+    Accepts JSON payload with sensor_data, fault_code, and optional operating_hours.
+    Returns decarbonization metrics, excess fuel waste, CO2 penalty, and CII rating (Grades A-E).
+    """
+    data = request.get_json() or {}
+    try:
+        sensor_data = data.get("sensor_data", data)
+        fault_code = data.get("fault_code")
+        operating_hours = data.get("operating_hours", 100.0)
+
+        if fault_code is None and sensor_data:
+            payload = _parse_sensor_payload(sensor_data)
+            fault_code, _, _ = _run_prediction(payload)
+        elif fault_code is None:
+            fault_code = 0
+
+        res = calculate_cii_emissions_compliance(sensor_data, fault_code, operating_hours)
         return jsonify(res)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

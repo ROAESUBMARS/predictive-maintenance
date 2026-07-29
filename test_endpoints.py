@@ -450,6 +450,69 @@ def test_api_procurement_custom_threshold(client):
     assert "Replacement Roller Bearings" in [p["name"] for p in data["parts_list"]]
 
 
+def test_cii_nominal_baseline(client, tech_token):
+    payload = {
+        "Temperature_C": 70,
+        "Pressure_psi": 100,
+        "Vibration_g": 0.02,
+        "Flow_Rate_lpm": 300,
+        "Oil_Level_pct": 60,
+        "RPM": 1500,
+        "Coolant_Leak": 0,
+        "Operating_Hours": 100
+    }
+    headers = {"Authorization": f"Bearer {tech_token}"}
+    response = client.post("/predict", json=payload, headers=headers)
+    assert response.status_code == 200
+    data = response.json
+    assert "cii_emissions" in data
+    cii = data["cii_emissions"]
+    assert cii["cii_rating"] == "A"
+    assert cii["excess_power_kw"] == 0.0
+    assert cii["compliance_warning"] is None
+
+
+def test_cii_degraded_fault_impact(client, tech_token):
+    # Test high vibration fault causing efficiency drop & CII rating degradation
+    payload = {
+        "Temperature_C": 85,
+        "Pressure_psi": 90,
+        "Vibration_g": 0.08,
+        "Flow_Rate_lpm": 300,
+        "Oil_Level_pct": 60,
+        "RPM": 1500,
+        "Coolant_Leak": 0,
+        "Operating_Hours": 100
+    }
+    headers = {"Authorization": f"Bearer {tech_token}"}
+    response = client.post("/predict", json=payload, headers=headers)
+    assert response.status_code == 200
+    data = response.json
+    assert "cii_emissions" in data
+    cii = data["cii_emissions"]
+    assert cii["cii_rating"] in ["D", "E"]
+    assert cii["excess_power_kw"] > 10.0
+    assert cii["excess_fuel_kg_per_day"] > 50.0
+    assert cii["excess_co2_kg_per_day"] > 150.0
+    assert cii["compliance_warning"] is not None
+    assert "IMO COMPLIANCE ALERT" in cii["compliance_warning"]
+
+
+def test_api_cii_emissions_endpoint(client):
+    payload = {
+        "fault_code": 1,
+        "sensor_data": {"Temperature_C": 92.0, "Vibration_g": 0.04}
+    }
+    headers = {"Authorization": "Bearer admin"}
+    response = client.post("/api/cii-emissions", json=payload, headers=headers)
+    assert response.status_code == 200
+    data = response.json
+    assert "cii_rating" in data
+    assert "excess_power_kw" in data
+    assert "decarbonization_action" in data
+
+
+
 
 
 
