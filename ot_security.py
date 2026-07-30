@@ -90,6 +90,19 @@ class OTSecurityMonitor:
                 
             logger.warning(f"[OT SECURITY ANOMALY DETECTED] IP: {client_ip} | Anomalies: {len(anomalies)}")
 
+            try:
+                import supabase_client
+                supabase_client.log_ot_security_event(
+                    event_type="OT_TELEMETRY_SPOOFING_ANOMALY",
+                    ip_address=client_ip,
+                    path="/predict",
+                    reason=f"Anomalies detected: {len(anomalies)} physical bound violations",
+                    threat_level=self.threat_level,
+                    payload_snapshot={"anomalies": anomalies}
+                )
+            except Exception as e:
+                logger.error(f"Failed to log OT security anomaly to Supabase: {e}")
+
         return {
             "is_valid": not is_anomalous,
             "anomalies": anomalies,

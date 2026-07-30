@@ -214,9 +214,6 @@ function enterApp(role) {
         document.getElementById('view-engineer').style.display = 'block';
         renderEngineerWorkOrdersTable();
         
-        if (typeof window.triggerEngWelcomeAnimation === 'function') {
-            window.triggerEngWelcomeAnimation();
-        }
     } else if (role === 'rel') {
         sidebar.style.display = 'none';
         contentHeader.style.display = 'none';
@@ -224,6 +221,34 @@ function enterApp(role) {
         document.getElementById('view-reliability').style.display = 'block';
         // Delay chart instantiation to guarantee DOM rendering
         setTimeout(initReliabilityCharts, 100);
+    }
+    // Sync work orders from Supabase / API backend
+    fetchWorkOrdersFromBackend();
+}
+
+async function fetchWorkOrdersFromBackend() {
+    try {
+        const response = await authFetch(getApiUrl('/api/work-orders'));
+        if (response.ok) {
+            const data = await response.json();
+            if (data.work_orders && data.work_orders.length > 0) {
+                workOrders = data.work_orders.map(w => ({
+                    id: w.wo_number || w.id,
+                    wo_number: w.wo_number || w.id,
+                    fault: w.fault_name || w.fault,
+                    assignee: w.assignee,
+                    priority: w.priority,
+                    status: w.status,
+                    time: w.time_logged || w.time,
+                    unlocked: w.unlocked || false,
+                    diagnosis: w.diagnosis || {}
+                }));
+                renderEngineerWorkOrdersTable();
+                renderTechWorkOrders();
+            }
+        }
+    } catch (err) {
+        console.error("Failed to fetch work orders from backend:", err);
     }
 }
 

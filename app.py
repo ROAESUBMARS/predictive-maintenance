@@ -24,6 +24,7 @@ from ai_recommendation import AIRecommendationEngine
 from alert_service import trigger_fault_alerts
 from maintenance_scheduler import MaintenanceScheduler
 from ot_security import ot_monitor
+import supabase_client
 
 app = Flask(__name__)
 
@@ -179,10 +180,20 @@ def login():
     if not secrets.compare_digest(password, expected_password):
         return jsonify({"error": "Invalid password"}), 401
 
-    if email not in USER_DATABASE:
-        return jsonify({"error": "User email not authorized"}), 401
+    registered_role = None
 
-    registered_role = USER_DATABASE[email]
+    # Check Supabase users table first if enabled
+    if supabase_client.is_enabled():
+        sp_user = supabase_client.get_user_by_email(email)
+        if sp_user and sp_user.get("role"):
+            registered_role = sp_user.get("role")
+
+    # Fallback to in-memory USER_DATABASE dictionary
+    if not registered_role:
+        if email not in USER_DATABASE:
+            return jsonify({"error": "User email not authorized"}), 401
+        registered_role = USER_DATABASE[email]
+
     if registered_role != requested_role:
         return jsonify({"error": f"Role mismatch. Registered as {registered_role}"}), 403
 
@@ -192,7 +203,8 @@ def login():
         "status": "success",
         "token": token,
         "role": registered_role,
-        "email": email
+        "email": email,
+        "auth_source": "supabase" if supabase_client.is_enabled() and sp_user else "in_memory"
     })
 
 
@@ -560,7 +572,8 @@ def health():
         "model_loaded": model is not None,
         "mode": "ml_model" if model else "rule_based",
         "recommendation_engine": "AIRecommendationEngine v1.0",
-        "ot_security_status": ot_monitor.threat_level
+        "ot_security_status": ot_monitor.threat_level,
+        "supabase_status": "connected" if supabase_client.is_enabled() else "disabled"
     })
 
 
@@ -568,6 +581,114 @@ def health():
 def ot_security_status():
     """Returns OT Cybersecurity telemetry anomaly monitor summary and audit log."""
     return jsonify(ot_monitor.get_security_summary())
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Work Orders API Endpoints (Supabase Backed with In-Memory Fallback)
+# ──────────────────────────────────────────────────────────────────────────────
+
+WORK_ORDERS_STORE = [
+    {
+        "wo_number": "WO-8992",
+        "fault_name": "Bearing Replacement",
+        "assignee": "Tech: Mike Ross",
+        "priority": "High",
+        "status": "In Progress",
+        "time_logged": "Day 2 (14 hrs)",
+        "created_by": "eng@nmu.edu.ng",
+        "diagnosis": {
+            "fault_name": "Bearing Replacement",
+            "primary_actions": [
+                "Shut down pump and lock out power.",
+                "Disassemble pump coupling and bearings casing.",
+                "Inspect bearings for pitting, scoring, or thermal discoloration.",
+                "Replace damaged bearings and pack with fresh grease.",
+                "Reassemble bearing housing and check shaft alignment."
+            ],
+            "spare_parts": ["Replacement roller bearings", "Bearing seal kit", "Lithium grease"]
+        }
+    }
+]
+
+
+@app.route("/api/work-orders", methods=["GET"])
+def get_work_orders():
+    """Retrieve all work orders (Supabase backed with in-memory fallback)."""
+    if supabase_client.is_enabled():
+        orders = supabase_client.get_work_orders()
+        if orders:
+            return jsonify({"status": "success", "source": "supabase", "work_orders": orders})
+    return jsonify({"status": "success", "source": "in_memory", "work_orders": WORK_ORDERS_STORE})
+
+
+@app.route("/api/work-orders", methods=["POST"])
+def create_work_order():
+    """Create a new work order."""
+    data = request.get_json() or {}
+    wo_number = data.get("wo_number") or data.get("id") or f"WO-{secrets.randbelow(9000) + 1000}"
+    fault_name = data.get("fault_name") or data.get("fault", "General Maintenance")
+    assignee = data.get("assignee", "Tech: Sarah Jenkins")
+    priority = data.get("priority", "Medium")
+    status = data.get("status", "New")
+    time_logged = data.get("time_logged") or data.get("time", "Not started")
+    diagnosis = data.get("diagnosis", {})
+    created_by = getattr(g, "current_user", "eng@nmu.edu.ng")
+
+    new_wo = {
+        "wo_number": wo_number,
+        "fault_name": fault_name,
+        "assignee": assignee,
+        "priority": priority,
+        "status": status,
+        "time_logged": time_logged,
+        "diagnosis": diagnosis,
+        "created_by": created_by
+    }
+
+    if supabase_client.is_enabled():
+        supabase_client.create_work_order(
+            wo_number=wo_number,
+            fault_name=fault_name,
+            assignee=assignee,
+            priority=priority,
+            status=status,
+            time_logged=time_logged,
+            diagnosis=diagnosis,
+            created_by=created_by
+        )
+
+    WORK_ORDERS_STORE.insert(0, new_wo)
+    return jsonify({"status": "success", "work_order": new_wo}), 201
+
+
+@app.route("/api/work-orders/<wo_number>", methods=["PATCH"])
+def update_work_order(wo_number):
+    """Update work order status."""
+    data = request.get_json() or {}
+    new_status = data.get("status")
+    if not new_status:
+        return jsonify({"error": "Missing status parameter"}), 400
+
+    if supabase_client.is_enabled():
+        supabase_client.update_work_order_status(wo_number, new_status)
+
+    for wo in WORK_ORDERS_STORE:
+        if wo.get("wo_number") == wo_number or wo.get("id") == wo_number:
+            wo["status"] = new_status
+            return jsonify({"status": "success", "work_order": wo})
+
+    return jsonify({"error": "Work order not found"}), 404
+
+
+@app.route("/api/work-orders/<wo_number>", methods=["DELETE"])
+def delete_work_order(wo_number):
+    """Delete a work order."""
+    if supabase_client.is_enabled():
+        supabase_client.delete_work_order(wo_number)
+
+    global WORK_ORDERS_STORE
+    WORK_ORDERS_STORE = [w for w in WORK_ORDERS_STORE if w.get("wo_number") != wo_number and w.get("id") != wo_number]
+    return jsonify({"status": "success", "deleted": wo_number})
 
 
 @app.route("/predict", methods=["POST"])
@@ -631,6 +752,24 @@ def predict():
         rul_val = rec.get("rul_info", {}).get("rul_hours", 720.0)
         procurement_info = generate_suggested_procurement(rul_val, fault_code, payload)
         cii_info = calculate_cii_emissions_compliance(payload, fault_code)
+
+        # Log prediction diagnostic to Supabase if enabled
+        current_email = getattr(g, "current_user", "anonymous")
+        try:
+            supabase_client.log_diagnostic(
+                email=current_email,
+                fault_code=fault_code,
+                fault_name=result["fault"],
+                severity=result["severity"],
+                confidence=confidence,
+                mode=mode,
+                sensor_data=payload,
+                ai_recommendation=rec,
+                cii_rating=cii_info.get("cii_rating"),
+                rul_hours=rul_val
+            )
+        except Exception as sb_err:
+            logger.error(f"Supabase diagnostic logging error: {sb_err}")
 
         return jsonify({
             # Original fields (backwards-compatible)

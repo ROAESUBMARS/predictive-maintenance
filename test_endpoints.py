@@ -23,6 +23,13 @@ def tech_token(client):
     assert response.status_code == 200
     return response.json["token"]
 
+@pytest.fixture
+def eng_token(client):
+    payload = {"email": "eng@nmu.edu.ng", "password": "admin", "role": "eng"}
+    response = client.post("/api/login", json=payload)
+    assert response.status_code == 200
+    return response.json["token"]
+
 def test_health(client):
     response = client.get("/health")
     assert response.status_code == 200
@@ -559,6 +566,49 @@ def test_ot_security_status_endpoint(client):
     assert "packets_scanned" in data
     assert "anomalies_detected" in data
     assert "recommendations" in data
+
+
+def test_work_orders_api_crud(client, eng_token):
+    headers = {"Authorization": f"Bearer {eng_token}"}
+    
+    # 1. GET work orders
+    res = client.get("/api/work-orders", headers=headers)
+    assert res.status_code == 200
+    data = res.json
+    assert data["status"] == "success"
+    assert "work_orders" in data
+    
+    # 2. POST create work order
+    new_wo = {
+        "wo_number": "WO-TEST-99",
+        "fault_name": "Testing Bearing Failure",
+        "assignee": "Tech: Mike Ross",
+        "priority": "High",
+        "status": "New",
+        "time_logged": "Not started",
+        "diagnosis": {"primary_actions": ["Inspect bearing"]}
+    }
+    res = client.post("/api/work-orders", json=new_wo, headers=headers)
+    assert res.status_code == 201
+    assert res.json["status"] == "success"
+    assert res.json["work_order"]["wo_number"] == "WO-TEST-99"
+
+    # 3. PATCH update work order status
+    res = client.patch("/api/work-orders/WO-TEST-99", json={"status": "Completed"}, headers=headers)
+    assert res.status_code == 200
+    assert res.json["work_order"]["status"] == "Completed"
+
+    # 4. DELETE work order
+    res = client.delete("/api/work-orders/WO-TEST-99", headers=headers)
+    assert res.status_code == 200
+    assert res.json["deleted"] == "WO-TEST-99"
+
+
+def test_health_supabase_status(client):
+    res = client.get("/health")
+    assert res.status_code == 200
+    assert "supabase_status" in res.json
+
 
 
 
