@@ -1447,8 +1447,25 @@ function renderTechnicianView(ai, isOptimal) {
     }
 }
 
+function setSliderValue(id, val) {
+    const slider = document.getElementById(`${id}-slider`);
+    const valSpan = document.getElementById(`${id}-val`);
+    if (slider) slider.value = val;
+    if (valSpan) valSpan.textContent = val;
+}
+
 let telemetryTickCounter = 0;
 let lastDiagnosticTick = 0;
+let liveFaultCycleIndex = 0;
+let isFaultSurgeActive = false;
+
+const LIVE_FAULT_TYPES = [
+    { name: 'overheating', temp: 95, pres: 118, vib: 0.022, flow: 290, oil: 58, rpm: 1520, leak: 0, toast: '🔥 Live Telemetry Anomaly: Overheating Fault Detected' },
+    { name: 'high_vibration', temp: 74, pres: 100, vib: 0.052, flow: 295, oil: 60, rpm: 1650, leak: 0, toast: '⚡ Live Telemetry Anomaly: High Vibration Fault Detected' },
+    { name: 'pressure_failure', temp: 72, pres: 68, vib: 0.024, flow: 180, oil: 59, rpm: 1480, leak: 0, toast: '⚠️ Live Telemetry Anomaly: Hydraulic Pressure Failure Detected' },
+    { name: 'low_oil', temp: 78, pres: 96, vib: 0.031, flow: 285, oil: 18, rpm: 1490, leak: 0, toast: '🛢️ Live Telemetry Anomaly: Low Engine Oil Level Detected' },
+    { name: 'coolant_leak', temp: 82, pres: 98, vib: 0.026, flow: 290, oil: 55, rpm: 1500, leak: 1, toast: '💧 Live Telemetry Anomaly: Coolant Leakage Fault Detected' }
+];
 
 function simulateLiveTelemetry() {
     const tempSlider = document.getElementById('temp-slider');
@@ -1456,8 +1473,43 @@ function simulateLiveTelemetry() {
 
     telemetryTickCounter++;
     const tick = telemetryTickCounter * 0.45;
+    const cyclePos = telemetryTickCounter % 16;
 
-    // Read active slider baselines configured by the user
+    // Check if live periodic fault injection is active (ticks 10 to 14 of 16-second cycle)
+    const presetSelect = document.getElementById('preset-select');
+    const isUserCustomPreset = presetSelect && presetSelect.value !== 'normal' && presetSelect.value !== 'nominal';
+
+    if (!isUserCustomPreset) {
+        if (cyclePos >= 10 && cyclePos <= 14) {
+            const activeFault = LIVE_FAULT_TYPES[liveFaultCycleIndex % LIVE_FAULT_TYPES.length];
+            setSliderValue('temp', activeFault.temp);
+            setSliderValue('pres', activeFault.pres);
+            setSliderValue('vib', activeFault.vib);
+            setSliderValue('flow', activeFault.flow);
+            setSliderValue('oil', activeFault.oil);
+            setSliderValue('rpm', activeFault.rpm);
+            document.getElementById('leak-select').value = activeFault.leak;
+
+            if (cyclePos === 10 && !isFaultSurgeActive) {
+                isFaultSurgeActive = true;
+                showToast(activeFault.toast, 'warning', 3500);
+            }
+        } else if (cyclePos === 15 && isFaultSurgeActive) {
+            // End surge, return to nominal baseline
+            isFaultSurgeActive = false;
+            liveFaultCycleIndex++;
+            setSliderValue('temp', 70);
+            setSliderValue('pres', 100);
+            setSliderValue('vib', 0.020);
+            setSliderValue('flow', 300);
+            setSliderValue('oil', 60);
+            setSliderValue('rpm', 1500);
+            document.getElementById('leak-select').value = 0;
+            showToast('<i class="fa-solid fa-circle-check"></i> Live Telemetry Recovered to Nominal Baseline', 'success', 2500);
+        }
+    }
+
+    // Read active slider baselines configured by the user or live cycle
     let baseTemp = parseFloat(document.getElementById('temp-slider').value) || 70;
     let basePres = parseFloat(document.getElementById('pres-slider').value) || 100;
     let baseVib  = parseFloat(document.getElementById('vib-slider').value)  || 0.020;
@@ -1465,13 +1517,28 @@ function simulateLiveTelemetry() {
     let baseOil  = parseFloat(document.getElementById('oil-slider').value)  || 60;
     let baseRpm  = parseFloat(document.getElementById('rpm-slider').value)  || 1500;
 
-    // Apply realistic micro-fluctuations (sensor noise) around active user baselines
+    // Apply realistic micro-fluctuations (sensor noise) around active baselines
     let tempVal = baseTemp + (Math.sin(tick * 0.3) * 0.8) + (Math.random() * 0.4 - 0.2);
     let presVal = basePres + (Math.cos(tick * 0.4) * 1.2) + (Math.random() * 0.6 - 0.3);
     let vibVal  = baseVib  + (Math.sin(tick) * 0.002) + (Math.random() * 0.001 - 0.0005);
     let flowVal = baseFlow + (Math.cos(tick * 0.8) * 3.5) + (Math.random() * 2.0 - 1.0);
     let oilVal  = baseOil  + (Math.sin(tick * 0.5) * 0.4) + (Math.random() * 0.2 - 0.1);
     let rpmVal  = baseRpm  + (Math.sin(tick * 0.6) * 12.0) + (Math.random() * 6.0 - 3.0);
+
+    // Sync numeric value displays
+    const tempValEl = document.getElementById('temp-val');
+    const presValEl = document.getElementById('pres-val');
+    const vibValEl  = document.getElementById('vib-val');
+    const flowValEl = document.getElementById('flow-val');
+    const oilValEl  = document.getElementById('oil-val');
+    const rpmValEl  = document.getElementById('rpm-val');
+
+    if (tempValEl) tempValEl.textContent = tempVal.toFixed(1);
+    if (presValEl) presValEl.textContent = presVal.toFixed(1);
+    if (vibValEl)  vibValEl.textContent  = vibVal.toFixed(3);
+    if (flowValEl) flowValEl.textContent = flowVal.toFixed(0);
+    if (oilValEl)  oilValEl.textContent  = oilVal.toFixed(0);
+    if (rpmValEl)  rpmValEl.textContent  = rpmVal.toFixed(0);
 
     // Update raw data display & telemetry chart smoothly
     updateRawDataTable();
@@ -1481,8 +1548,8 @@ function simulateLiveTelemetry() {
         update3DModelTelemetry(tempVal, vibVal, baseVib > 0.04 || baseTemp > 88 ? 1 : 0);
     }
 
-    // Evaluate diagnostic analysis every 3 seconds (3 ticks) to avoid API rate limits
-    if (telemetryTickCounter - lastDiagnosticTick >= 3) {
+    // Evaluate diagnostic analysis every 2 seconds (2 ticks) to reflect live telemetry faults immediately
+    if (telemetryTickCounter - lastDiagnosticTick >= 2) {
         lastDiagnosticTick = telemetryTickCounter;
         runDiagnostic(true); // background silent diagnostic evaluation
     }
