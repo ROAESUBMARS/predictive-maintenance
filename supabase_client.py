@@ -28,9 +28,25 @@ logger = logging.getLogger(__name__)
 _supabase = None
 _supabase_enabled = False
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip()
-SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
-SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "").strip()
+SUPABASE_URL = (
+    os.environ.get("SUPABASE_URL") or 
+    os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or 
+    ""
+).strip()
+
+SUPABASE_SERVICE_KEY = (
+    os.environ.get("SUPABASE_SERVICE_KEY") or 
+    os.environ.get("SUPABASE_SECRET_KEY") or 
+    os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or 
+    ""
+).strip()
+
+SUPABASE_ANON_KEY = (
+    os.environ.get("SUPABASE_ANON_KEY") or 
+    os.environ.get("SUPABASE_PUBLISHABLE_KEY") or 
+    os.environ.get("NEXT_PUBLIC_SUPABASE_ANON_KEY") or 
+    ""
+).strip()
 
 if SUPABASE_URL and SUPABASE_SERVICE_KEY:
     try:
