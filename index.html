@@ -95,219 +95,48 @@
             <div class="login-title">AI-Based Predictive Maintenance System</div>
             <div class="login-sub">Select your role to authenticate and enter the dashboard view</div>
 
-            <!-- GSAP Auto-Animated Self-Assembling & Dismantling Sequence Showcase -->
+            <!-- Ultra-HD HPU Operational Video Showcase -->
             <div class="glass-card" style="margin: 24px auto 32px; padding: 24px; border-radius: 16px; border: 1px solid var(--accent); text-align: left; background: rgba(22, 27, 34, 0.85); backdrop-filter: blur(16px);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                     <div>
                         <h3 style="font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 8px; color: var(--text-primary);">
-                            <i class="fa-solid fa-arrows-spin" style="color: var(--accent);"></i>
-                            Automated Assembly & Dismantling Sequence — HPU-01 Hydraulic Power Unit
+                            <i class="fa-solid fa-circle-play" style="color: var(--accent);"></i>
+                            Operational Telemetry Video — HPU-01 Hydraulic Power Unit
                         </h3>
                         <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-                            Automated continuous assembly & disassembly loop · Real-time equipment diagnostic view
+                            High-definition equipment video feed · Real-time condition monitoring telemetry view
                         </p>
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <span class="scroll-hint-badge" style="font-size: 11px; padding: 6px 12px; background: rgba(88,166,255,0.12); border: 1px solid var(--accent); border-radius: 20px; color: var(--accent); font-weight: 600;">
-                            <i class="fa-solid fa-arrows-rotate fa-spin"></i> Auto Assembly & Dismantling Loop
+                            <i class="fa-solid fa-video fa-beat"></i> Live Video Stream
                         </span>
                     </div>
                 </div>
                 
                 <div id="landing-sequence-container" style="position: relative; width: 100%; height: 500px; border-radius: 12px; overflow: hidden; background: radial-gradient(circle at center, rgba(15, 39, 68, 0.4) 0%, rgba(13, 17, 23, 0.98) 100%), repeating-linear-gradient(0deg, rgba(88,166,255,0.04) 0px, rgba(88,166,255,0.04) 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, rgba(88,166,255,0.04) 0px, rgba(88,166,255,0.04) 1px, transparent 1px, transparent 20px); border: 1px solid var(--accent);">
-                    
-                    <!-- Preloader Graceful Fallback Overlay -->
-                    <div id="landing-loading-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(13, 17, 23, 0.92); backdrop-filter: blur(16px); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.6s ease, visibility 0.6s;">
-                        <div style="background: rgba(22, 27, 34, 0.95); border: 1px solid var(--card-border); padding: 24px 32px; border-radius: 14px; text-align: center; max-width: 380px; width: 88%; box-shadow: 0 16px 36px rgba(0,0,0,0.5);">
-                            <div style="width: 40px; height: 40px; border: 3px solid rgba(88,166,255,0.15); border-top: 3px solid var(--accent); border-radius: 50%; animation: landing-spin 1s linear infinite; margin: 0 auto 16px;"></div>
-                            <style>@keyframes landing-spin { 100% { transform: rotate(360deg); } }</style>
-                            <h4 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Loading Ultra-Sharp HPU Frames</h4>
-                            <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">Preloading 150 image sequence frames...</p>
-                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-bottom: 8px;">
-                                <div id="landing-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent) 0%, #bc8cff 100%); border-radius: 3px; transition: width 0.15s ease-out;"></div>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; font-size: 11px; font-family: monospace; color: var(--accent);">
-                                <span id="landing-progress-count">0 / 150</span>
-                                <span id="landing-progress-text">0%</span>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- Technical Blueprint Callout Header Overlay -->
                     <div style="position: absolute; top: 14px; right: 16px; background: rgba(248, 81, 73, 0.15); border: 1px solid var(--danger); border-radius: 6px; padding: 6px 12px; color: var(--danger); font-size: 11px; font-weight: 700; letter-spacing: 0.5px; z-index: 10; backdrop-filter: blur(6px);">
                         <i class="fa-solid fa-triangle-exclamation"></i> HPU ANOMALY: MOTOR A BEARING VIBRATION EXCEEDS SPEC
                     </div>
 
-                    <!-- High DPI Canvas -->
-                    <canvas id="landing-sequence-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
+                    <!-- Native Ultra-HD HTML5 Video Player -->
+                    <video id="landing-pump-video" autoplay loop muted playsinline poster="static/hydraulic_power_unit.png" style="width: 100%; height: 100%; object-fit: contain; display: block; background: #0d1117;">
+                        <source src="static/pump_video.mp4" type="video/mp4">
+                        <source src="pump_video.mp4" type="video/mp4">
+                        <source src="pump video.mp4" type="video/mp4">
+                        Your browser does not support HTML5 video playback.
+                    </video>
 
                     <!-- Bottom Telemetry HUD Bar -->
                     <div style="position: absolute; bottom: 12px; left: 16px; font-size: 11px; color: var(--text-secondary); background: rgba(13, 17, 23, 0.85); padding: 6px 14px; border-radius: 6px; border: 1px solid var(--card-border); backdrop-filter: blur(8px); z-index: 10; display: flex; align-items: center; gap: 12px;">
                         <span><i class="fa-solid fa-diagram-project" style="color: var(--accent);"></i> Dual 45kW Drive Motors · 800L Reservoir · 185 Bar Manifold</span>
-                        <span style="color: var(--accent); font-weight: 700; font-family: monospace; border-left: 1px solid var(--card-border); padding-left: 12px;" id="landing-hud-frame">0° · ASSEMBLING · FRAME 1/150</span>
+                        <span style="color: var(--accent); font-weight: 700; font-family: monospace; border-left: 1px solid var(--card-border); padding-left: 12px;" id="landing-hud-video-status">
+                            <i class="fa-solid fa-circle-dot" style="color: var(--success);"></i> LIVE HD STREAM
+                        </span>
                     </div>
                 </div>
-
-                <!-- Sequence Logic Script -->
-                <script>
-                    (function() {
-                        const FRAME_COUNT = 150;
-                        const getPrimaryPath = index => `./static/pump_videos/ezgif-frame-${String(index + 1).padStart(3, '0')}.jpg`;
-                        const getSecondaryPath = index => `./pump_videos/ezgif-frame-${String(index + 1).padStart(3, '0')}.jpg`;
-
-                        const canvas = document.getElementById('landing-sequence-canvas');
-                        if (!canvas) return;
-                        const ctx = canvas.getContext('2d');
-                        const loadingOverlay = document.getElementById('landing-loading-overlay');
-                        const progressBar = document.getElementById('landing-progress-bar');
-                        const progressText = document.getElementById('landing-progress-text');
-                        const progressCount = document.getElementById('landing-progress-count');
-                        const hudFrame = document.getElementById('landing-hud-frame');
-
-                        const images = [];
-                        const state = { frame: 0, lastFrame: 0 };
-                        let loadedCount = 0;
-                        let firstFrameRendered = false;
-                        let lastValidImg = null;
-
-                        const fallbackImg = new Image();
-                        fallbackImg.src = 'static/hydraulic_power_unit.png';
-                        fallbackImg.onload = () => {
-                            if (!firstFrameRendered) renderFrame(0);
-                        };
-
-                        function resizeCanvas() {
-                            const dpr = Math.max(window.devicePixelRatio || 1, 2);
-                            const rect = canvas.getBoundingClientRect();
-                            canvas.width = (rect.width || 800) * dpr;
-                            canvas.height = (rect.height || 500) * dpr;
-                            ctx.imageSmoothingEnabled = true;
-                            ctx.imageSmoothingQuality = 'high';
-                            renderFrame(Math.round(state.frame));
-                        }
-
-                        function renderFrame(index) {
-                            const safeIndex = Math.min(FRAME_COUNT - 1, Math.max(0, index));
-                            let img = images[safeIndex];
-                            if (!img || !img.complete || img.naturalWidth === 0) {
-                                img = lastValidImg || (fallbackImg.complete && fallbackImg.naturalWidth > 0 ? fallbackImg : null);
-                            } else {
-                                lastValidImg = img;
-                            }
-                            if (!img) return;
-
-                            ctx.clearRect(0, 0, canvas.width, canvas.height);
-                            const imgRatio = img.naturalWidth / img.naturalHeight;
-                            const canvasRatio = canvas.width / canvas.height;
-
-                            let drawW, drawH, drawX, drawY;
-                            if (canvasRatio > imgRatio) {
-                                drawH = canvas.height;
-                                drawW = canvas.height * imgRatio;
-                                drawX = (canvas.width - drawW) / 2;
-                                drawY = 0;
-                            } else {
-                                drawW = canvas.width;
-                                drawH = canvas.width / imgRatio;
-                                drawX = 0;
-                                drawY = (canvas.height - drawH) / 2;
-                            }
-                            ctx.drawImage(img, drawX, drawY, drawW, drawH);
-                        }
-
-                        function updateHUD(index) {
-                            const deg = Math.round((index / (FRAME_COUNT - 1)) * 360);
-                            const modeText = state.frame >= state.lastFrame ? 'ASSEMBLING' : 'DISMANTLING';
-                            state.lastFrame = state.frame;
-                            if (hudFrame) {
-                                hudFrame.textContent = `${deg}° · ${modeText} · FRAME ${index + 1}/150`;
-                            }
-                        }
-
-                        function updateProgress() {
-                            const percent = Math.round((loadedCount / FRAME_COUNT) * 100);
-                            if (progressBar) progressBar.style.width = percent + '%';
-                            if (progressText) progressText.textContent = percent + '%';
-                            if (progressCount) progressCount.textContent = `${loadedCount} / 150`;
-                        }
-
-                        function preloadImages() {
-                            let started = false;
-                            const forceStartTimer = setTimeout(() => {
-                                if (!started) {
-                                    started = true;
-                                    startAutoAnimation();
-                                }
-                            }, 2500);
-
-                            for (let i = 0; i < FRAME_COUNT; i++) {
-                                const img = new Image();
-                                img.onload = () => {
-                                    loadedCount++;
-                                    updateProgress();
-
-                                    if (i === 0 && !firstFrameRendered) {
-                                        firstFrameRendered = true;
-                                        resizeCanvas();
-                                    }
-
-                                    if (loadedCount === FRAME_COUNT && !started) {
-                                        started = true;
-                                        clearTimeout(forceStartTimer);
-                                        startAutoAnimation();
-                                    }
-                                };
-
-                                img.onerror = () => {
-                                    img.onerror = () => {
-                                        loadedCount++;
-                                        updateProgress();
-                                        if (loadedCount === FRAME_COUNT && !started) {
-                                            started = true;
-                                            clearTimeout(forceStartTimer);
-                                            startAutoAnimation();
-                                        }
-                                    };
-                                    img.src = getSecondaryPath(i);
-                                };
-
-                                img.src = getPrimaryPath(i);
-                                images.push(img);
-                            }
-                        }
-
-                        function startAutoAnimation() {
-                            if (loadingOverlay) {
-                                loadingOverlay.style.opacity = '0';
-                                setTimeout(() => { loadingOverlay.style.display = 'none'; }, 600);
-                            }
-                            resizeCanvas();
-
-                            if (window.gsap) {
-                                gsap.to(state, {
-                                    frame: FRAME_COUNT - 1,
-                                    duration: 7.5,
-                                    ease: "sine.inOut",
-                                    repeat: -1,
-                                    yoyo: true,
-                                    onUpdate: () => {
-                                        const idx = Math.round(state.frame);
-                                        renderFrame(idx);
-                                        updateHUD(idx);
-                                    }
-                                });
-                            }
-                        }
-
-                        window.addEventListener('resize', resizeCanvas);
-
-                        if (document.readyState === 'loading') {
-                            document.addEventListener('DOMContentLoaded', preloadImages);
-                        } else {
-                            preloadImages();
-                        }
-                    })();
-                </script>
             </div>
 
             <!-- HPU 360° Operational Walkthrough Sequence -->
