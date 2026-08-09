@@ -152,8 +152,8 @@
                 <script>
                     (function() {
                         const FRAME_COUNT = 300;
-                        const FOLDER_PATH = './ezgif-54e35e8b73548f5b-jpg/';
-                        const getFramePath = index => `${FOLDER_PATH}ezgif-frame-${String(index + 1).padStart(3, '0')}.jpg`;
+                        const getPrimaryPath = index => `./static/ezgif-54e35e8b73548f5b-jpg/ezgif-frame-${String(index + 1).padStart(3, '0')}.jpg`;
+                        const getSecondaryPath = index => `./ezgif-54e35e8b73548f5b-jpg/ezgif-frame-${String(index + 1).padStart(3, '0')}.jpg`;
 
                         const canvas = document.getElementById('landing-sequence-canvas');
                         if (!canvas) return;
@@ -168,12 +168,19 @@
                         const state = { frame: 0, lastFrame: 0 };
                         let loadedCount = 0;
                         let firstFrameRendered = false;
+                        let lastValidImg = null;
+
+                        const fallbackImg = new Image();
+                        fallbackImg.src = 'static/hydraulic_power_unit.png';
+                        fallbackImg.onload = () => {
+                            if (!firstFrameRendered) renderFrame(0);
+                        };
 
                         function resizeCanvas() {
                             const dpr = Math.max(window.devicePixelRatio || 1, 2);
                             const rect = canvas.getBoundingClientRect();
-                            canvas.width = rect.width * dpr;
-                            canvas.height = rect.height * dpr;
+                            canvas.width = (rect.width || 800) * dpr;
+                            canvas.height = (rect.height || 500) * dpr;
                             ctx.imageSmoothingEnabled = true;
                             ctx.imageSmoothingQuality = 'high';
                             renderFrame(Math.round(state.frame));
@@ -181,8 +188,13 @@
 
                         function renderFrame(index) {
                             const safeIndex = Math.min(FRAME_COUNT - 1, Math.max(0, index));
-                            const img = images[safeIndex];
-                            if (!img || !img.complete || img.naturalWidth === 0) return;
+                            let img = images[safeIndex];
+                            if (!img || !img.complete || img.naturalWidth === 0) {
+                                img = lastValidImg || (fallbackImg.complete && fallbackImg.naturalWidth > 0 ? fallbackImg : null);
+                            } else {
+                                lastValidImg = img;
+                            }
+                            if (!img) return;
 
                             ctx.clearRect(0, 0, canvas.width, canvas.height);
                             const imgRatio = img.naturalWidth / img.naturalHeight;
@@ -212,28 +224,54 @@
                             }
                         }
 
+                        function updateProgress() {
+                            const percent = Math.round((loadedCount / FRAME_COUNT) * 100);
+                            if (progressBar) progressBar.style.width = percent + '%';
+                            if (progressText) progressText.textContent = percent + '%';
+                            if (progressCount) progressCount.textContent = `${loadedCount} / 300`;
+                        }
+
                         function preloadImages() {
+                            let started = false;
+                            const forceStartTimer = setTimeout(() => {
+                                if (!started) {
+                                    started = true;
+                                    startAutoAnimation();
+                                }
+                            }, 2500);
+
                             for (let i = 0; i < FRAME_COUNT; i++) {
                                 const img = new Image();
-                                img.src = getFramePath(i);
                                 img.onload = () => {
                                     loadedCount++;
-                                    const percent = Math.round((loadedCount / FRAME_COUNT) * 100);
-                                    if (progressBar) progressBar.style.width = percent + '%';
-                                    if (progressText) progressText.textContent = percent + '%';
-                                    if (progressCount) progressCount.textContent = `${loadedCount} / 300`;
+                                    updateProgress();
 
                                     if (i === 0 && !firstFrameRendered) {
                                         firstFrameRendered = true;
                                         resizeCanvas();
                                     }
 
-                                    if (loadedCount === FRAME_COUNT) startAutoAnimation();
+                                    if (loadedCount === FRAME_COUNT && !started) {
+                                        started = true;
+                                        clearTimeout(forceStartTimer);
+                                        startAutoAnimation();
+                                    }
                                 };
+
                                 img.onerror = () => {
-                                    loadedCount++;
-                                    if (loadedCount === FRAME_COUNT) startAutoAnimation();
+                                    img.onerror = () => {
+                                        loadedCount++;
+                                        updateProgress();
+                                        if (loadedCount === FRAME_COUNT && !started) {
+                                            started = true;
+                                            clearTimeout(forceStartTimer);
+                                            startAutoAnimation();
+                                        }
+                                    };
+                                    img.src = getSecondaryPath(i);
                                 };
+
+                                img.src = getPrimaryPath(i);
                                 images.push(img);
                             }
                         }
@@ -251,7 +289,7 @@
                                     duration: 7.5,
                                     ease: "sine.inOut",
                                     repeat: -1,
-                                    yoyo: true, // Reverses animation to dismantle pump repeatedly
+                                    yoyo: true,
                                     onUpdate: () => {
                                         const idx = Math.round(state.frame);
                                         renderFrame(idx);

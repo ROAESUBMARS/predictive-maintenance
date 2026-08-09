@@ -123,8 +123,8 @@ def check_auth():
     if request.method == "OPTIONS":
         return None
         
-    # Allow public access to home, health, login, static files
-    if request.path in ["/", "/health", "/api/login"] or request.path.startswith("/static/"):
+    # Allow public access to home, health, login, static files, and frame images
+    if request.path in ["/", "/health", "/api/login", "/index.html", "/hpu_scroll_sequence.html"] or request.path.startswith("/static/") or request.path.startswith("/ezgif-54e35e8b73548f5b-jpg/"):
         return None
         
     auth_header = request.headers.get("Authorization")
@@ -209,9 +209,21 @@ def login():
 
 
 @app.route("/", methods=["GET"])
+@app.route("/index.html", methods=["GET"])
 def home():
     root_dir = os.path.dirname(os.path.abspath(__file__))
     return send_from_directory(root_dir, "index.html")
+
+@app.route("/hpu_scroll_sequence.html", methods=["GET"])
+def hpu_scroll():
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(root_dir, "hpu_scroll_sequence.html")
+
+@app.route("/ezgif-54e35e8b73548f5b-jpg/<path:filename>", methods=["GET"])
+def serve_ezgif(filename):
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    ezgif_dir = os.path.join(root_dir, "ezgif-54e35e8b73548f5b-jpg")
+    return send_from_directory(ezgif_dir, filename)
 
 MODEL_PATH = os.environ.get("MODEL_PATH", "saved_model.pkl")
 model = None

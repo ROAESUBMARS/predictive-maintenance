@@ -403,28 +403,35 @@
                 }
             ];
 
-            // ── Crisp High-DPI Canvas Resizing ──
+            let lastValidImg = null;
+            const fallbackImg = new Image();
+            fallbackImg.src = 'static/hydraulic_power_unit.png';
+            fallbackImg.onload = () => {
+                if (!firstFrameRendered) renderFrame(0);
+            };
+
+            // ── Canvas Responsive Resizing (High-DPI Support) ──
             function resizeCanvas() {
-                // Ensure retina/high-DPI pixel sharpness
                 const dpr = Math.max(window.devicePixelRatio || 1, 2);
                 const rect = canvas.getBoundingClientRect();
-                
-                canvas.width = rect.width * dpr;
-                canvas.height = rect.height * dpr;
-                
-                // Re-render current frame with high quality smoothing
+                canvas.width = (rect.width || 800) * dpr;
+                canvas.height = (rect.height || 500) * dpr;
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
-                
                 renderFrame(Math.round(sequenceState.frame));
             }
 
             // ── Draw Frame Centered & Sharp ──
             function renderFrame(index) {
                 const safeIndex = Math.min(FRAME_COUNT - 1, Math.max(0, index));
-                const img = images[safeIndex];
+                let img = images[safeIndex];
 
-                if (!img || !img.complete || img.naturalWidth === 0) return;
+                if (!img || !img.complete || img.naturalWidth === 0) {
+                    img = lastValidImg || (fallbackImg.complete && fallbackImg.naturalWidth > 0 ? fallbackImg : null);
+                } else {
+                    lastValidImg = img;
+                }
+                if (!img) return;
 
                 // Clear canvas
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -471,11 +478,21 @@
                 }
             }
 
+            const getPrimaryPath = i => `./static/ezgif-54e35e8b73548f5b-jpg/ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
+            const getSecondaryPath = i => `./ezgif-54e35e8b73548f5b-jpg/ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
+
             // ── Preload All Image Frames ──
             function preloadImages() {
+                let started = false;
+                const forceStartTimer = setTimeout(() => {
+                    if (!started) {
+                        started = true;
+                        onPreloadComplete();
+                    }
+                }, 2500);
+
                 for (let i = 0; i < FRAME_COUNT; i++) {
                     const img = new Image();
-                    img.src = getFramePath(i);
 
                     img.onload = () => {
                         loadedCount++;
@@ -492,17 +509,26 @@
                         }
 
                         // When all frames finish preloading
-                        if (loadedCount === FRAME_COUNT) {
+                        if (loadedCount === FRAME_COUNT && !started) {
+                            started = true;
+                            clearTimeout(forceStartTimer);
                             onPreloadComplete();
                         }
                     };
 
                     img.onerror = () => {
-                        // Fallback on error: count frame as loaded so app doesn't hang
-                        loadedCount++;
-                        if (loadedCount === FRAME_COUNT) onPreloadComplete();
+                        img.onerror = () => {
+                            loadedCount++;
+                            if (loadedCount === FRAME_COUNT && !started) {
+                                started = true;
+                                clearTimeout(forceStartTimer);
+                                onPreloadComplete();
+                            }
+                        };
+                        img.src = getSecondaryPath(i);
                     };
 
+                    img.src = getPrimaryPath(i);
                     images.push(img);
                 }
             }
