@@ -310,6 +310,191 @@
                 </script>
             </div>
 
+            <!-- HPU 360° Operational Walkthrough Sequence -->
+            <div class="glass-card" style="margin: 0 auto 32px; padding: 24px; border-radius: 16px; border: 1px solid rgba(63,185,80,0.5); text-align: left; background: rgba(22, 27, 34, 0.85); backdrop-filter: blur(16px);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h3 style="font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 8px; color: var(--text-primary);">
+                            <i class="fa-solid fa-rotate" style="color: var(--success);"></i>
+                            HPU-01 360° Operational Walkthrough — Full Rotation View
+                        </h3>
+                        <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                            Continuous 360° rotation sequence · Component identification · Real-time condition monitoring view
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span style="font-size: 11px; padding: 6px 12px; background: rgba(63,185,80,0.12); border: 1px solid var(--success); border-radius: 20px; color: var(--success); font-weight: 600;">
+                            <i class="fa-solid fa-circle-play fa-spin"></i> Live 360° Rotation Loop
+                        </span>
+                    </div>
+                </div>
+
+                <div id="landing-seq2-container" style="position: relative; width: 100%; height: 500px; border-radius: 12px; overflow: hidden; background: radial-gradient(circle at center, rgba(10, 40, 20, 0.4) 0%, rgba(13, 17, 23, 0.98) 100%), repeating-linear-gradient(0deg, rgba(63,185,80,0.03) 0px, rgba(63,185,80,0.03) 1px, transparent 1px, transparent 20px), repeating-linear-gradient(90deg, rgba(63,185,80,0.03) 0px, rgba(63,185,80,0.03) 1px, transparent 1px, transparent 20px); border: 1px solid rgba(63,185,80,0.5);">
+
+                    <!-- Preloader Overlay -->
+                    <div id="landing-seq2-loading" style="position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(13, 17, 23, 0.92); backdrop-filter: blur(16px); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.6s ease;">
+                        <div style="background: rgba(22, 27, 34, 0.95); border: 1px solid var(--card-border); padding: 24px 32px; border-radius: 14px; text-align: center; max-width: 380px; width: 88%; box-shadow: 0 16px 36px rgba(0,0,0,0.5);">
+                            <div style="width: 40px; height: 40px; border: 3px solid rgba(63,185,80,0.15); border-top: 3px solid var(--success); border-radius: 50%; animation: landing-spin 1s linear infinite; margin: 0 auto 16px;"></div>
+                            <h4 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Loading 360° Rotation Frames</h4>
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">Preloading 300 high-resolution frames...</p>
+                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-bottom: 8px;">
+                                <div id="landing-seq2-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--success) 0%, #58a6ff 100%); border-radius: 3px; transition: width 0.15s ease-out;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; font-family: monospace; color: var(--success);">
+                                <span id="landing-seq2-progress-count">0 / 300</span>
+                                <span id="landing-seq2-progress-text">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Badge -->
+                    <div style="position: absolute; top: 14px; right: 16px; background: rgba(63,185,80,0.15); border: 1px solid var(--success); border-radius: 6px; padding: 6px 12px; color: var(--success); font-size: 11px; font-weight: 700; letter-spacing: 0.5px; z-index: 10; backdrop-filter: blur(6px);">
+                        <i class="fa-solid fa-circle-check"></i> HPU STATUS: NOMINAL — ALL SYSTEMS OPERATIONAL
+                    </div>
+
+                    <!-- High DPI Canvas -->
+                    <canvas id="landing-seq2-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
+
+                    <!-- Bottom HUD Bar -->
+                    <div style="position: absolute; bottom: 12px; left: 16px; font-size: 11px; color: var(--text-secondary); background: rgba(13, 17, 23, 0.85); padding: 6px 14px; border-radius: 6px; border: 1px solid var(--card-border); backdrop-filter: blur(8px); z-index: 10; display: flex; align-items: center; gap: 12px;">
+                        <span><i class="fa-solid fa-360-degrees" style="color: var(--success);"></i> HPU-01 · Full Rotation Inspection</span>
+                        <span style="color: var(--success); font-weight: 700; font-family: monospace; border-left: 1px solid var(--card-border); padding-left: 12px;" id="landing-seq2-hud">0° · ROTATING · FRAME 1/300</span>
+                    </div>
+                </div>
+
+                <!-- Sequence 2 Script -->
+                <script>
+                    (function() {
+                        const FRAME_COUNT = 300;
+                        const getPrimary = i => `./static/ezgif-719aeaa7e2205951-jpg/ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
+                        const getSecondary = i => `./ezgif-719aeaa7e2205951-jpg/ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
+
+                        const canvas = document.getElementById('landing-seq2-canvas');
+                        if (!canvas) return;
+                        const ctx = canvas.getContext('2d');
+                        const loadingOverlay = document.getElementById('landing-seq2-loading');
+                        const progressBar = document.getElementById('landing-seq2-progress-bar');
+                        const progressText = document.getElementById('landing-seq2-progress-text');
+                        const progressCount = document.getElementById('landing-seq2-progress-count');
+                        const hudEl = document.getElementById('landing-seq2-hud');
+
+                        const images = [];
+                        const state = { frame: 0 };
+                        let loadedCount = 0;
+                        let firstFrameRendered = false;
+                        let lastValidImg = null;
+
+                        const fallbackImg = new Image();
+                        fallbackImg.src = 'static/hydraulic_power_unit.png';
+                        fallbackImg.onload = () => { if (!firstFrameRendered) resizeCanvas(); };
+
+                        function resizeCanvas() {
+                            const dpr = Math.max(window.devicePixelRatio || 1, 2);
+                            const rect = canvas.getBoundingClientRect();
+                            canvas.width = (rect.width || 800) * dpr;
+                            canvas.height = (rect.height || 500) * dpr;
+                            ctx.imageSmoothingEnabled = true;
+                            ctx.imageSmoothingQuality = 'high';
+                            renderFrame(Math.round(state.frame));
+                        }
+
+                        function renderFrame(index) {
+                            const safeIndex = Math.min(FRAME_COUNT - 1, Math.max(0, index));
+                            let img = images[safeIndex];
+                            if (!img || !img.complete || img.naturalWidth === 0) {
+                                img = lastValidImg || (fallbackImg.complete && fallbackImg.naturalWidth > 0 ? fallbackImg : null);
+                            } else {
+                                lastValidImg = img;
+                            }
+                            if (!img) return;
+
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            const imgRatio = img.naturalWidth / img.naturalHeight;
+                            const canvasRatio = canvas.width / canvas.height;
+                            let drawW, drawH, drawX, drawY;
+                            if (canvasRatio > imgRatio) {
+                                drawH = canvas.height; drawW = canvas.height * imgRatio;
+                                drawX = (canvas.width - drawW) / 2; drawY = 0;
+                            } else {
+                                drawW = canvas.width; drawH = canvas.width / imgRatio;
+                                drawX = 0; drawY = (canvas.height - drawH) / 2;
+                            }
+                            ctx.drawImage(img, drawX, drawY, drawW, drawH);
+                        }
+
+                        function updateHUD(index) {
+                            const deg = Math.round((index / (FRAME_COUNT - 1)) * 360);
+                            if (hudEl) hudEl.textContent = `${deg}° · ROTATING · FRAME ${index + 1}/300`;
+                        }
+
+                        function updateProgress() {
+                            const pct = Math.round((loadedCount / FRAME_COUNT) * 100);
+                            if (progressBar) progressBar.style.width = pct + '%';
+                            if (progressText) progressText.textContent = pct + '%';
+                            if (progressCount) progressCount.textContent = `${loadedCount} / 300`;
+                        }
+
+                        function preloadImages() {
+                            let started = false;
+                            const forceTimer = setTimeout(() => {
+                                if (!started) { started = true; startAnimation(); }
+                            }, 2500);
+
+                            for (let i = 0; i < FRAME_COUNT; i++) {
+                                const img = new Image();
+                                img.onload = () => {
+                                    loadedCount++;
+                                    updateProgress();
+                                    if (i === 0 && !firstFrameRendered) { firstFrameRendered = true; resizeCanvas(); }
+                                    if (loadedCount === FRAME_COUNT && !started) {
+                                        started = true; clearTimeout(forceTimer); startAnimation();
+                                    }
+                                };
+                                img.onerror = () => {
+                                    img.onerror = () => {
+                                        loadedCount++; updateProgress();
+                                        if (loadedCount === FRAME_COUNT && !started) {
+                                            started = true; clearTimeout(forceTimer); startAnimation();
+                                        }
+                                    };
+                                    img.src = getSecondary(i);
+                                };
+                                img.src = getPrimary(i);
+                                images.push(img);
+                            }
+                        }
+
+                        function startAnimation() {
+                            if (loadingOverlay) {
+                                loadingOverlay.style.opacity = '0';
+                                setTimeout(() => { loadingOverlay.style.display = 'none'; }, 600);
+                            }
+                            resizeCanvas();
+                            if (window.gsap) {
+                                gsap.to(state, {
+                                    frame: FRAME_COUNT - 1,
+                                    duration: 10,
+                                    ease: 'none',
+                                    repeat: -1,
+                                    onUpdate: () => {
+                                        const idx = Math.round(state.frame);
+                                        renderFrame(idx);
+                                        updateHUD(idx);
+                                    }
+                                });
+                            }
+                        }
+
+                        window.addEventListener('resize', resizeCanvas);
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', preloadImages);
+                        } else {
+                            preloadImages();
+                        }
+                    })();
+                </script>
+            </div>
+
             <div class="role-grid">
                 <div class="role-card tech" onclick="openLoginModal('tech')">
                     <div class="role-icon">🔧</div>
