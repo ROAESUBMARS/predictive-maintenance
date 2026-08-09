@@ -122,12 +122,12 @@
                             <div style="width: 40px; height: 40px; border: 3px solid rgba(88,166,255,0.15); border-top: 3px solid var(--accent); border-radius: 50%; animation: landing-spin 1s linear infinite; margin: 0 auto 16px;"></div>
                             <style>@keyframes landing-spin { 100% { transform: rotate(360deg); } }</style>
                             <h4 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Loading Ultra-Sharp HPU Frames</h4>
-                            <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">Preloading 300 image sequence frames...</p>
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">Preloading 150 image sequence frames...</p>
                             <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-bottom: 8px;">
                                 <div id="landing-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent) 0%, #bc8cff 100%); border-radius: 3px; transition: width 0.15s ease-out;"></div>
                             </div>
                             <div style="display: flex; justify-content: space-between; font-size: 11px; font-family: monospace; color: var(--accent);">
-                                <span id="landing-progress-count">0 / 300</span>
+                                <span id="landing-progress-count">0 / 150</span>
                                 <span id="landing-progress-text">0%</span>
                             </div>
                         </div>
@@ -144,16 +144,16 @@
                     <!-- Bottom Telemetry HUD Bar -->
                     <div style="position: absolute; bottom: 12px; left: 16px; font-size: 11px; color: var(--text-secondary); background: rgba(13, 17, 23, 0.85); padding: 6px 14px; border-radius: 6px; border: 1px solid var(--card-border); backdrop-filter: blur(8px); z-index: 10; display: flex; align-items: center; gap: 12px;">
                         <span><i class="fa-solid fa-diagram-project" style="color: var(--accent);"></i> Dual 45kW Drive Motors · 800L Reservoir · 185 Bar Manifold</span>
-                        <span style="color: var(--accent); font-weight: 700; font-family: monospace; border-left: 1px solid var(--card-border); padding-left: 12px;" id="landing-hud-frame">0° · ASSEMBLING · FRAME 1/300</span>
+                        <span style="color: var(--accent); font-weight: 700; font-family: monospace; border-left: 1px solid var(--card-border); padding-left: 12px;" id="landing-hud-frame">0° · ASSEMBLING · FRAME 1/150</span>
                     </div>
                 </div>
 
                 <!-- Sequence Logic Script -->
                 <script>
                     (function() {
-                        const FRAME_COUNT = 300;
-                        const getPrimaryPath = index => `./static/ezgif-54e35e8b73548f5b-jpg/ezgif-frame-${String(index + 1).padStart(3, '0')}.jpg`;
-                        const getSecondaryPath = index => `./ezgif-54e35e8b73548f5b-jpg/ezgif-frame-${String(index + 1).padStart(3, '0')}.jpg`;
+                        const FRAME_COUNT = 150;
+                        const getPrimaryPath = index => `./static/pump_videos/ezgif-frame-${String(index + 1).padStart(3, '0')}.jpg`;
+                        const getSecondaryPath = index => `./pump_videos/ezgif-frame-${String(index + 1).padStart(3, '0')}.jpg`;
 
                         const canvas = document.getElementById('landing-sequence-canvas');
                         if (!canvas) return;
@@ -220,7 +220,7 @@
                             const modeText = state.frame >= state.lastFrame ? 'ASSEMBLING' : 'DISMANTLING';
                             state.lastFrame = state.frame;
                             if (hudFrame) {
-                                hudFrame.textContent = `${deg}° · ${modeText} · FRAME ${index + 1}/300`;
+                                hudFrame.textContent = `${deg}° · ${modeText} · FRAME ${index + 1}/150`;
                             }
                         }
 
@@ -228,7 +228,7 @@
                             const percent = Math.round((loadedCount / FRAME_COUNT) * 100);
                             if (progressBar) progressBar.style.width = percent + '%';
                             if (progressText) progressText.textContent = percent + '%';
-                            if (progressCount) progressCount.textContent = `${loadedCount} / 300`;
+                            if (progressCount) progressCount.textContent = `${loadedCount} / 150`;
                         }
 
                         function preloadImages() {
@@ -336,12 +336,12 @@
                         <div style="background: rgba(22, 27, 34, 0.95); border: 1px solid var(--card-border); padding: 24px 32px; border-radius: 14px; text-align: center; max-width: 380px; width: 88%; box-shadow: 0 16px 36px rgba(0,0,0,0.5);">
                             <div style="width: 40px; height: 40px; border: 3px solid rgba(63,185,80,0.15); border-top: 3px solid var(--success); border-radius: 50%; animation: landing-spin 1s linear infinite; margin: 0 auto 16px;"></div>
                             <h4 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Loading 360° Rotation Frames</h4>
-                            <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">Preloading 300 high-resolution frames...</p>
+                            <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">Preloading 150 high-resolution frames...</p>
                             <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin-bottom: 8px;">
                                 <div id="landing-seq2-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--success) 0%, #58a6ff 100%); border-radius: 3px; transition: width 0.15s ease-out;"></div>
                             </div>
                             <div style="display: flex; justify-content: space-between; font-size: 11px; font-family: monospace; color: var(--success);">
-                                <span id="landing-seq2-progress-count">0 / 300</span>
+                                <span id="landing-seq2-progress-count">0 / 150</span>
                                 <span id="landing-seq2-progress-text">0%</span>
                             </div>
                         </div>
@@ -358,16 +358,16 @@
                     <!-- Bottom HUD Bar -->
                     <div style="position: absolute; bottom: 12px; left: 16px; font-size: 11px; color: var(--text-secondary); background: rgba(13, 17, 23, 0.85); padding: 6px 14px; border-radius: 6px; border: 1px solid var(--card-border); backdrop-filter: blur(8px); z-index: 10; display: flex; align-items: center; gap: 12px;">
                         <span><i class="fa-solid fa-360-degrees" style="color: var(--success);"></i> HPU-01 · Full Rotation Inspection</span>
-                        <span style="color: var(--success); font-weight: 700; font-family: monospace; border-left: 1px solid var(--card-border); padding-left: 12px;" id="landing-seq2-hud">0° · ROTATING · FRAME 1/300</span>
+                        <span style="color: var(--success); font-weight: 700; font-family: monospace; border-left: 1px solid var(--card-border); padding-left: 12px;" id="landing-seq2-hud">0° · ROTATING · FRAME 1/150</span>
                     </div>
                 </div>
 
                 <!-- Sequence 2 Script -->
                 <script>
                     (function() {
-                        const FRAME_COUNT = 300;
-                        const getPrimary = i => `./static/ezgif-719aeaa7e2205951-jpg/ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
-                        const getSecondary = i => `./ezgif-719aeaa7e2205951-jpg/ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
+                        const FRAME_COUNT = 150;
+                        const getPrimary = i => `./static/pump_videos/ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
+                        const getSecondary = i => `./pump_videos/ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
 
                         const canvas = document.getElementById('landing-seq2-canvas');
                         if (!canvas) return;
@@ -424,14 +424,14 @@
 
                         function updateHUD(index) {
                             const deg = Math.round((index / (FRAME_COUNT - 1)) * 360);
-                            if (hudEl) hudEl.textContent = `${deg}° · ROTATING · FRAME ${index + 1}/300`;
+                            if (hudEl) hudEl.textContent = `${deg}° · ROTATING · FRAME ${index + 1}/150`;
                         }
 
                         function updateProgress() {
                             const pct = Math.round((loadedCount / FRAME_COUNT) * 100);
                             if (progressBar) progressBar.style.width = pct + '%';
                             if (progressText) progressText.textContent = pct + '%';
-                            if (progressCount) progressCount.textContent = `${loadedCount} / 300`;
+                            if (progressCount) progressCount.textContent = `${loadedCount} / 150`;
                         }
 
                         function preloadImages() {

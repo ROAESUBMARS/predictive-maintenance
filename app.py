@@ -124,7 +124,7 @@ def check_auth():
         return None
         
     # Allow public access to home, health, login, static files, and frame images
-    if request.path in ["/", "/health", "/api/login", "/index.html", "/hpu_scroll_sequence.html"] or request.path.startswith("/static/") or request.path.startswith("/ezgif-54e35e8b73548f5b-jpg/") or request.path.startswith("/ezgif-719aeaa7e2205951-jpg/"):
+    if request.path in ["/", "/health", "/api/login", "/index.html", "/hpu_scroll_sequence.html"] or request.path.startswith("/static/") or request.path.startswith("/ezgif-54e35e8b73548f5b-jpg/") or request.path.startswith("/ezgif-719aeaa7e2205951-jpg/") or request.path.startswith("/pump_videos/") or request.path.startswith("/pump%20videos/") or request.path.startswith("/pump videos/"):
         return None
         
     auth_header = request.headers.get("Authorization")
@@ -230,6 +230,13 @@ def serve_ezgif2(filename):
     root_dir = os.path.dirname(os.path.abspath(__file__))
     ezgif_dir = os.path.join(root_dir, "ezgif-719aeaa7e2205951-jpg")
     return send_from_directory(ezgif_dir, filename)
+
+@app.route("/pump_videos/<path:filename>", methods=["GET"])
+@app.route("/pump videos/<path:filename>", methods=["GET"])
+def serve_pump_videos(filename):
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    pv_dir = os.path.join(root_dir, "pump videos")
+    return send_from_directory(pv_dir, filename)
 
 MODEL_PATH = os.environ.get("MODEL_PATH", "saved_model.pkl")
 model = None

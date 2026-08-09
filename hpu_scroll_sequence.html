@@ -349,26 +349,8 @@
     <script>
         (function() {
             // Configuration
-            const FRAME_COUNT = 300;
-            const FOLDER_PATH = './ezgif-54e35e8b73548f5b-jpg/';
+            const FRAME_COUNT = 150;
             
-            // Format frame index to 3 digits (e.g. ezgif-frame-001.jpg)
-            const getFramePath = (index) => {
-                const padIndex = String(index + 1).padStart(3, '0');
-                return `${FOLDER_PATH}ezgif-frame-${padIndex}.jpg`;
-            };
-
-            const canvas = document.getElementById('hpu-sequence-canvas');
-            const ctx = canvas.getContext('2d');
-            const loadingOverlay = document.getElementById('hpu-loading-overlay');
-            const progressBar = document.getElementById('hpu-progress-bar');
-            const progressText = document.getElementById('hpu-progress-text');
-            const progressCount = document.getElementById('hpu-progress-count');
-            const hudFrameInfo = document.getElementById('hud-frame-info');
-            const calloutTag = document.getElementById('callout-tag');
-            const calloutTitle = document.getElementById('callout-title');
-            const calloutDesc = document.getElementById('callout-desc');
-
             // Image repository & state
             const images = [];
             const sequenceState = { frame: 0, lastFrame: 0 };
@@ -378,25 +360,25 @@
             // Feature callout metadata based on frame angle
             const callouts = [
                 {
-                    range: [0, 75],
+                    range: [0, 37],
                     tag: 'FRONT VIEW · DRIVE MOTORS',
                     title: 'Dual 45kW Electric Drive Motors',
                     desc: 'Primary 3-phase induction motors driving twin axial piston pumps with vibration telemetry monitoring.'
                 },
                 {
-                    range: [76, 150],
+                    range: [38, 75],
                     tag: 'SIDE ELEVATION · CONTROL MANIFOLD',
                     title: 'Proportional Valve & Manifold',
                     desc: 'Precision hydraulic manifold block regulating 185 bar system pressure and directional oil flow.'
                 },
                 {
-                    range: [151, 225],
+                    range: [76, 112],
                     tag: 'REAR VIEW · HYDRAULIC RESERVOIR',
                     title: '800L Fluid Reservoir & Filtration',
                     desc: 'Heavy-duty steel reservoir equipped with oil temperature sensors, fluid level gauges, and return filters.'
                 },
                 {
-                    range: [226, 300],
+                    range: [113, 150],
                     tag: 'TOP ELEVATION · HEAT EXCHANGER',
                     title: 'Air-Oil Heat Exchanger & PLC Cabinet',
                     desc: 'Top-mounted cooling radiator with automated thermostat control and integrated PLC telemetry unit.'
@@ -478,8 +460,8 @@
                 }
             }
 
-            const getPrimaryPath = i => `./static/ezgif-54e35e8b73548f5b-jpg/ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
-            const getSecondaryPath = i => `./ezgif-54e35e8b73548f5b-jpg/ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
+            const getPrimaryPath = i => `./static/pump_videos/ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
+            const getSecondaryPath = i => `./pump_videos/ezgif-frame-${String(i + 1).padStart(3, '0')}.jpg`;
 
             // ── Preload All Image Frames ──
             function preloadImages() {
