@@ -124,7 +124,7 @@ def check_auth():
         return None
         
     # Allow public access to home, health, login, static files, frame images, and video files
-    if request.path in ["/", "/health", "/api/login", "/index.html", "/hpu_scroll_sequence.html", "/pump_video.mp4", "/pump%20video.mp4", "/pump video.mp4"] or request.path.startswith("/static/") or request.path.startswith("/ezgif-54e35e8b73548f5b-jpg/") or request.path.startswith("/ezgif-719aeaa7e2205951-jpg/") or request.path.startswith("/pump_videos/") or request.path.startswith("/pump%20videos/") or request.path.startswith("/pump videos/"):
+    if request.path in ["/", "/health", "/api/login", "/index.html", "/hpu_scroll_sequence.html", "/pump_video.mp4", "/pump%20video.mp4", "/pump video.mp4", "/offshore.mp4"] or request.path.startswith("/static/") or request.path.startswith("/ezgif-54e35e8b73548f5b-jpg/") or request.path.startswith("/ezgif-719aeaa7e2205951-jpg/") or request.path.startswith("/pump_videos/") or request.path.startswith("/pump%20videos/") or request.path.startswith("/pump videos/"):
         return None
         
     auth_header = request.headers.get("Authorization")
@@ -243,6 +243,11 @@ def serve_pump_videos(filename):
 def serve_pump_video():
     root_dir = os.path.dirname(os.path.abspath(__file__))
     return send_from_directory(root_dir, "pump video.mp4")
+
+@app.route("/offshore.mp4", methods=["GET"])
+def serve_offshore_video():
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(root_dir, "offshore.mp4")
 
 MODEL_PATH = os.environ.get("MODEL_PATH", "saved_model.pkl")
 model = None
