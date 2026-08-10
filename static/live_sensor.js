@@ -1,41 +1,49 @@
-// ── Live WebSocket Sensor Client ─────────────────────────────────────────────
+// ── Live Telemetry Client (WebSocket / SSE / REST Polling Hybrid) ───────────
 (function() {
     let socket = null;
-    let isWSConnected = false;
+    let eventSource = null;
+    let pollingInterval = null;
+    let isConnected = false;
 
-    function initWebSocket() {
-        if (typeof io === 'undefined') {
-            console.log('Socket.IO client library not loaded. Falling back to local simulation.');
-            return;
+    function initTelemetryClient() {
+        // 1. Try WebSocket if Socket.IO client library is available
+        if (typeof io !== 'undefined') {
+            tryWebSocket();
+        } else {
+            trySSEOrPolling();
         }
+    }
 
+    function tryWebSocket() {
         const serverUrl = window.location.origin;
-        console.log('🔌 Connecting to WebSocket server:', serverUrl);
+        console.log('🔌 Attempting WebSocket connection to:', serverUrl);
 
         try {
             socket = io(serverUrl, {
                 reconnection: true,
-                reconnectionAttempts: 10,
+                reconnectionAttempts: 3,
                 reconnectionDelay: 1000,
-                timeout: 5000
+                timeout: 4000
             });
 
             socket.on('connect', () => {
                 console.log('🟢 WebSocket connected! ID:', socket.id);
-                isWSConnected = true;
-                setLiveWSBadge(true);
-                if (window.setLocalSimulationPaused) {
-                    window.setLocalSimulationPaused(true);
-                }
+                isConnected = true;
+                setLiveBadge(true, 'LIVE WS');
+                if (window.setLocalSimulationPaused) window.setLocalSimulationPaused(true);
             });
 
             socket.on('disconnect', () => {
-                console.log('🔴 WebSocket disconnected.');
-                isWSConnected = false;
-                setLiveWSBadge(false);
-                if (window.setLocalSimulationPaused) {
-                    window.setLocalSimulationPaused(false);
-                }
+                console.log('🔴 WebSocket disconnected. Falling back to REST/SSE...');
+                isConnected = false;
+                setLiveBadge(false);
+                trySSEOrPolling();
+            });
+
+            socket.on('connect_error', () => {
+                console.log('⚠️ WebSocket connection error/unavailable. Falling back to SSE/Polling...');
+                if (socket) socket.close();
+                trySSEOrPolling();
             });
 
             socket.on('sensor_update', (allPumpsData) => {
@@ -43,18 +51,86 @@
             });
 
         } catch (err) {
-            console.warn('WebSocket connection error:', err);
-            setLiveWSBadge(false);
+            console.warn('WebSocket init failed, switching to SSE/Polling:', err);
+            trySSEOrPolling();
         }
     }
 
-    function setLiveWSBadge(connected) {
+    function trySSEOrPolling() {
+        if (isConnected) return;
+
+        // Try Server-Sent Events (SSE) stream endpoint first
+        if (typeof EventSource !== 'undefined' && !eventSource && !pollingInterval) {
+            console.log('📡 Attempting SSE stream: /api/telemetry/stream');
+            try {
+                eventSource = new EventSource('/api/telemetry/stream');
+                eventSource.onopen = function() {
+                    console.log('🟢 SSE Stream Connected!');
+                    isConnected = true;
+                    setLiveBadge(true, 'LIVE STREAM');
+                    if (window.setLocalSimulationPaused) window.setLocalSimulationPaused(true);
+                };
+                eventSource.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        onSensorDataReceived(data);
+                    } catch (e) {}
+                };
+                eventSource.onerror = function() {
+                    console.warn('⚠️ SSE Stream disconnected. Switching to 1s REST Polling...');
+                    if (eventSource) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
+                    startRESTPolling();
+                };
+                return;
+            } catch (err) {
+                console.warn('SSE not supported or failed, falling back to REST polling');
+            }
+        }
+
+        startRESTPolling();
+    }
+
+    function startRESTPolling() {
+        if (pollingInterval || isConnected) return;
+
+        console.log('🔄 Starting 1s REST Polling endpoint: /api/telemetry/live');
+        
+        async function fetchTick() {
+            try {
+                const res = await fetch('/api/telemetry/live');
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json && json.pumps) {
+                        if (!isConnected) {
+                            isConnected = true;
+                            setLiveBadge(true, 'LIVE API');
+                            if (window.setLocalSimulationPaused) window.setLocalSimulationPaused(true);
+                        }
+                        onSensorDataReceived(json.pumps);
+                    }
+                }
+            } catch (err) {
+                // If API fails, resume local simulation
+                setLiveBadge(false);
+                isConnected = false;
+                if (window.setLocalSimulationPaused) window.setLocalSimulationPaused(false);
+            }
+        }
+
+        fetchTick();
+        pollingInterval = setInterval(fetchTick, 1000);
+    }
+
+    function setLiveBadge(connected, label = 'LIVE WS') {
         const badge = document.getElementById('ws-live-badge');
         if (badge) {
             if (connected) {
                 badge.style.display = 'inline-flex';
                 badge.className = 'ws-badge connected';
-                badge.innerHTML = '<i class="fa-solid fa-satellite-dish fa-spin"></i> LIVE WS';
+                badge.innerHTML = `<i class="fa-solid fa-satellite-dish fa-spin"></i> ${label}`;
             } else {
                 badge.style.display = 'none';
             }
@@ -124,5 +200,5 @@
         if (el) el.value = val;
     }
 
-    document.addEventListener('DOMContentLoaded', initWebSocket);
+    document.addEventListener('DOMContentLoaded', initTelemetryClient);
 })();
