@@ -58,6 +58,7 @@ const PUMPS = [
   {id:'HP-11', name:'Pump Unit 11', location:'Aux Room', status:'yellow', fault:'Coolant Leak',            severity:'High',     temp:74,  pressure:103, vib:0.021, oil:63, time:'27 min ago'},
   {id:'HP-12', name:'Pump Unit 12', location:'Deck A - Starboard', status:'green', fault:'Normal',         severity:'Normal',   temp:76,  pressure:99,  vib:0.026, oil:70, time:'9 min ago'},
 ];
+window.PUMPS = PUMPS;
 
 const PRESETS = {
     normal: { temp: 70, pres: 100, vib: 0.020, flow: 300, oil: 60, rpm: 1500, leak: 0 },
@@ -1595,6 +1596,22 @@ function updateChartPoint(vib, flow, oil) {
     }
     telemetryChart.update();
 }
+
+window.updateChartPoint = updateChartPoint;
+window.updateRawDataTable = typeof updateRawDataTable !== 'undefined' ? updateRawDataTable : window.updateRawDataTable;
+
+window.setLocalSimulationPaused = function(paused) {
+    if (paused) {
+        if (liveTelemetryInterval) {
+            clearInterval(liveTelemetryInterval);
+            liveTelemetryInterval = null;
+        }
+    } else {
+        if (!liveTelemetryInterval) {
+            liveTelemetryInterval = setInterval(simulateLiveTelemetry, 1000);
+        }
+    }
+};
 
 async function sendChatMessage() {
     const input = document.getElementById('chat-input');
