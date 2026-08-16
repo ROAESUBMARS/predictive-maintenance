@@ -233,17 +233,30 @@ async function fetchWorkOrdersFromBackend() {
         if (response.ok) {
             const data = await response.json();
             if (data.work_orders && data.work_orders.length > 0) {
-                workOrders = data.work_orders.map(w => ({
+                const backendOrders = data.work_orders.map(w => ({
                     id: w.wo_number || w.id,
                     wo_number: w.wo_number || w.id,
                     fault: w.fault_name || w.fault,
-                    assignee: w.assignee,
-                    priority: w.priority,
-                    status: w.status,
-                    time: w.time_logged || w.time,
+                    assignee: w.assignee || 'Tech: Sarah Jenkins',
+                    priority: w.priority || 'Medium',
+                    status: w.status || 'New',
+                    time: w.time_logged || w.time || 'Not started',
                     unlocked: w.unlocked || false,
                     diagnosis: w.diagnosis || {}
                 }));
+
+                const orderMap = new Map();
+                backendOrders.forEach(bo => orderMap.set(bo.id, bo));
+                workOrders.forEach(lo => {
+                    const existing = orderMap.get(lo.id);
+                    if (!existing) {
+                        orderMap.set(lo.id, lo);
+                    } else {
+                        orderMap.set(lo.id, { ...existing, ...lo });
+                    }
+                });
+
+                workOrders = Array.from(orderMap.values());
                 renderEngineerWorkOrdersTable();
                 renderTechWorkOrders();
             }
@@ -524,7 +537,7 @@ function attachEventListeners() {
     });
 
     // Generate Work Order
-    document.getElementById('generate-wo-btn').addEventListener('click', () => {
+    document.getElementById('generate-wo-btn').addEventListener('click', async () => {
         const assignee = document.getElementById('wo-assignee').value;
         const priority = document.getElementById('wo-priority').value;
         const hours = document.getElementById('wo-est-hours').value || 0;
@@ -543,28 +556,45 @@ function attachEventListeners() {
         if (hours > 0) timeStr += `(${hours} hrs)`;
         if (!timeStr) timeStr = 'Not started';
 
-        // Add to global workOrders database
-        workOrders.push({
+        const newWoData = {
             id: woNumber,
+            wo_number: woNumber,
             fault: faultName,
+            fault_name: faultName,
             assignee: assignee,
             priority: priority,
             status: 'New',
             time: timeStr,
+            time_logged: timeStr,
             unlocked: false,
             diagnosis: {
                 fault_name: faultName,
                 primary_actions: currentDiagnosis.primary_actions || ['Inspect pump components.', 'Clear active fault alerts.'],
                 spare_parts: currentDiagnosis.spare_parts || []
             }
-        });
+        };
+
+        // Add locally
+        workOrders.unshift(newWoData);
 
         // Reset inputs
         document.getElementById('wo-est-hours').value = '';
         document.getElementById('wo-est-days').value = '';
         
         renderEngineerWorkOrdersTable();
+        renderTechWorkOrders();
         showToast(`Work Order <strong>${woNumber}</strong> generated and assigned to ${assignee.replace('Tech: ', '')}.`, 'success');
+
+        // Persist to backend
+        try {
+            await authFetch(getApiUrl('/api/work-orders'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newWoData)
+            });
+        } catch (err) {
+            console.error("Failed to persist work order to backend:", err);
+        }
     });
 
     // Tech verification handlers
@@ -572,7 +602,7 @@ function attachEventListeners() {
         document.getElementById('tech-qr-modal').style.display = 'flex';
     });
 
-    document.getElementById('tech-simulate-scan-btn').addEventListener('click', () => {
+    document.getElementById('tech-simulate-scan-btn').addEventListener('click', async () => {
         document.getElementById('tech-qr-modal').style.display = 'none';
         if (activeTechWO) {
             activeTechWO.unlocked = true;
@@ -580,11 +610,23 @@ function attachEventListeners() {
                 activeTechWO.status = 'In Progress';
             }
             selectTechWorkOrder(activeTechWO);
+            renderEngineerWorkOrdersTable();
+
+            try {
+                await authFetch(getApiUrl(`/api/work-orders/${encodeURIComponent(activeTechWO.id)}`), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: activeTechWO.status })
+                });
+            } catch (err) {
+                console.error("Failed to update work order status on backend:", err);
+            }
+
             showToast(`Asset Verified. Work Order <strong>${activeTechWO.id}</strong> unlocked.`, 'success');
         }
     });
 
-    document.getElementById('tech-complete-wo-btn').addEventListener('click', () => {
+    document.getElementById('tech-complete-wo-btn').addEventListener('click', async () => {
         if (activeTechWO) {
             activeTechWO.status = 'Completed';
             activeSimulationAnomaly = null; // Restore system to nominal on complete
@@ -593,6 +635,16 @@ function attachEventListeners() {
                 presetSelect.value = 'normal';
                 presetSelect.dispatchEvent(new Event('change'));
             }
+
+            try {
+                await authFetch(getApiUrl(`/api/work-orders/${encodeURIComponent(activeTechWO.id)}`), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'Completed' })
+                });
+            } catch (err) {
+                console.error("Failed to mark work order completed on backend:", err);
+            }
             
             if (typeof window.triggerFulfillmentAnimation === 'function') {
                 window.triggerFulfillmentAnimation();
@@ -600,6 +652,7 @@ function attachEventListeners() {
                 showToast(`Work Order <strong>${activeTechWO.id}</strong> completed. Pump returning to nominal baseline.`, 'success', 5000);
             }
             renderTechWorkOrders();
+            renderEngineerWorkOrdersTable();
         }
     });
 
@@ -811,6 +864,18 @@ function renderEngineerWorkOrdersTable() {
     });
 }
 
+function isWorkOrderAssignedToTech(wo, techName) {
+    if (!wo || !wo.assignee) return false;
+    const assigneeLower = wo.assignee.toLowerCase();
+    const nameLower = (techName || '').toLowerCase();
+    const firstName = nameLower.split(' ')[0] || '';
+    return (
+        assigneeLower.includes(nameLower) ||
+        (firstName && assigneeLower.includes(firstName)) ||
+        assigneeLower.includes('all')
+    );
+}
+
 function renderTechWorkOrders() {
     const container = document.getElementById('tech-wo-selector-container');
     const list = document.getElementById('tech-wo-list');
@@ -820,8 +885,8 @@ function renderTechWorkOrders() {
     if (!list) return;
     list.innerHTML = '';
     
-    // Filter active work orders for this tech
-    const activeWO = workOrders.filter(w => w.assignee.includes(currentTechName) && w.status !== 'Completed');
+    // Filter active work orders for this tech flexibly
+    const activeWO = workOrders.filter(w => isWorkOrderAssignedToTech(w, currentTechName) && w.status !== 'Completed');
     
     if (activeWO.length === 0) {
         container.style.display = 'none';

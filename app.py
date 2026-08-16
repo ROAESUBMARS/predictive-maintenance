@@ -645,6 +645,25 @@ def ot_security_status():
 
 WORK_ORDERS_STORE = [
     {
+        "wo_number": "WO-4102",
+        "fault_name": "Overheating & Thermal Seal Inspection",
+        "assignee": "Tech: Sarah Jenkins",
+        "priority": "Critical",
+        "status": "New",
+        "time_logged": "Immediate (Urgent)",
+        "created_by": "eng@nmu.edu.ng",
+        "diagnosis": {
+            "fault_name": "Overheating & Thermal Seal Inspection",
+            "primary_actions": [
+                "Verify cooling jacket fluid pressure and circulation rate.",
+                "Inspect mechanical face seals for thermal warping or scoring.",
+                "Flush heat exchanger and refill synthetic coolant reservoir.",
+                "Calibrate temperature probe sensors."
+            ],
+            "spare_parts": ["Thermal seal ring", "Coolant filter element", "Temperature sensor probe"]
+        }
+    },
+    {
         "wo_number": "WO-8992",
         "fault_name": "Bearing Replacement",
         "assignee": "Tech: Mike Ross",
@@ -662,6 +681,24 @@ WORK_ORDERS_STORE = [
                 "Reassemble bearing housing and check shaft alignment."
             ],
             "spare_parts": ["Replacement roller bearings", "Bearing seal kit", "Lithium grease"]
+        }
+    },
+    {
+        "wo_number": "WO-3150",
+        "fault_name": "Hydraulic Pressure & Valve Calibration",
+        "assignee": "Tech: David Chen",
+        "priority": "Medium",
+        "status": "New",
+        "time_logged": "Day 1 (8 hrs)",
+        "created_by": "eng@nmu.edu.ng",
+        "diagnosis": {
+            "fault_name": "Hydraulic Pressure & Valve Calibration",
+            "primary_actions": [
+                "Measure static and dynamic pressure differential across discharge valve.",
+                "Bleed trapped air pockets from hydraulic manifold lines.",
+                "Recalibrate proportional relief valve spring tension."
+            ],
+            "spare_parts": ["Proportional relief valve cartridge", "Pressure gauge assembly"]
         }
     }
 ]
