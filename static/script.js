@@ -463,14 +463,44 @@ function attachEventListeners() {
 
     const liveToggle = document.getElementById('live-telemetry-toggle');
     if (liveToggle) {
+        // Stop telemetry by default on application load until user activates it
+        liveToggle.checked = false;
+        if (typeof window.stopLiveTelemetryClient === 'function') {
+            window.stopLiveTelemetryClient();
+        }
+
         liveToggle.addEventListener('change', (e) => {
-            if (liveTelemetryInterval) clearInterval(liveTelemetryInterval);
+            const statusBadge = document.getElementById('telemetry-status-badge');
             if (e.target.checked) {
-                simulateLiveTelemetry(); // Trigger immediate first telemetry tick instantly
-                liveTelemetryInterval = setInterval(simulateLiveTelemetry, 1000);
-                showToast('<i class="fa-solid fa-satellite-dish"></i> Live Telemetry Streaming Active', 'success', 2500);
+                if (typeof window.startLiveTelemetryClient === 'function') {
+                    window.startLiveTelemetryClient();
+                }
+                if (!liveTelemetryInterval) {
+                    simulateLiveTelemetry();
+                    liveTelemetryInterval = setInterval(simulateLiveTelemetry, 1000);
+                }
+                if (statusBadge) {
+                    statusBadge.textContent = 'LIVE';
+                    statusBadge.style.background = 'rgba(63, 185, 80, 0.2)';
+                    statusBadge.style.color = '#3fb950';
+                    statusBadge.style.border = '1px solid #3fb950';
+                }
+                showToast('<i class="fa-solid fa-satellite-dish"></i> Live Telemetry Activated', 'success', 2500);
             } else {
-                showToast('Live Telemetry Paused', 'warning', 2000);
+                if (typeof window.stopLiveTelemetryClient === 'function') {
+                    window.stopLiveTelemetryClient();
+                }
+                if (liveTelemetryInterval) {
+                    clearInterval(liveTelemetryInterval);
+                    liveTelemetryInterval = null;
+                }
+                if (statusBadge) {
+                    statusBadge.textContent = 'OFF';
+                    statusBadge.style.background = 'rgba(255, 255, 255, 0.08)';
+                    statusBadge.style.color = 'var(--text-secondary)';
+                    statusBadge.style.border = 'none';
+                }
+                showToast('⏸️ Live Telemetry Stopped', 'warning', 2000);
             }
         });
     }

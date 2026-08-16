@@ -331,12 +331,13 @@
                             Diagnostic Backend: <span id="backend-mode" class="badge">ML MODEL</span> | Confidence: <span id="confidence-val">--</span>
                         </p>
                     </div>
-                    <div class="live-toggle" id="live-toggle-container">
+                    <div class="live-toggle" id="live-toggle-container" style="display:flex; align-items:center; gap:8px;">
                         <label class="switch">
                             <input type="checkbox" id="live-telemetry-toggle">
                             <span class="slider round"></span>
                         </label>
                         <span>Live Telemetry</span>
+                        <span id="telemetry-status-badge" class="badge" style="font-size:10px; font-weight:700; background:rgba(255,255,255,0.08); color:var(--text-secondary); padding:2px 8px; border-radius:12px; text-transform:uppercase; letter-spacing:0.5px;">OFF</span>
                     </div>
                 </header>
 

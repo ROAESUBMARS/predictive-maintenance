@@ -4,8 +4,24 @@
     let pollingInterval = null;
     let isConnected = false;
 
-    function initTelemetryClient() {
+    function startLiveTelemetryClient() {
+        if (isConnected) return;
         trySSEOrPolling();
+    }
+
+    function stopLiveTelemetryClient() {
+        if (eventSource) {
+            console.log('🛑 Closing SSE telemetry connection');
+            eventSource.close();
+            eventSource = null;
+        }
+        if (pollingInterval) {
+            console.log('🛑 Stopping REST polling interval');
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+        isConnected = false;
+        setLiveBadge(false);
     }
 
     function trySSEOrPolling() {
@@ -152,5 +168,7 @@
         if (el) el.value = val;
     }
 
-    document.addEventListener('DOMContentLoaded', initTelemetryClient);
+    // Export control functions globally
+    window.startLiveTelemetryClient = startLiveTelemetryClient;
+    window.stopLiveTelemetryClient = stopLiveTelemetryClient;
 })();
