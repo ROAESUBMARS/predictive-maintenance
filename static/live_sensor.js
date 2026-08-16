@@ -1,59 +1,11 @@
-// ── Live Telemetry Client (WebSocket / SSE / REST Polling Hybrid) ───────────
+// ── Live Telemetry Client (SSE / REST Polling Hybrid) ───────────
 (function() {
-    let socket = null;
     let eventSource = null;
     let pollingInterval = null;
     let isConnected = false;
 
     function initTelemetryClient() {
-        // 1. Try WebSocket if Socket.IO client library is available
-        if (typeof io !== 'undefined') {
-            tryWebSocket();
-        } else {
-            trySSEOrPolling();
-        }
-    }
-
-    function tryWebSocket() {
-        const serverUrl = window.location.origin;
-        console.log('🔌 Attempting WebSocket connection to:', serverUrl);
-
-        try {
-            socket = io(serverUrl, {
-                reconnection: true,
-                reconnectionAttempts: 3,
-                reconnectionDelay: 1000,
-                timeout: 4000
-            });
-
-            socket.on('connect', () => {
-                console.log('🟢 WebSocket connected! ID:', socket.id);
-                isConnected = true;
-                setLiveBadge(true, 'LIVE WS');
-                if (window.setLocalSimulationPaused) window.setLocalSimulationPaused(true);
-            });
-
-            socket.on('disconnect', () => {
-                console.log('🔴 WebSocket disconnected. Falling back to REST/SSE...');
-                isConnected = false;
-                setLiveBadge(false);
-                trySSEOrPolling();
-            });
-
-            socket.on('connect_error', () => {
-                console.log('⚠️ WebSocket connection error/unavailable. Falling back to SSE/Polling...');
-                if (socket) socket.close();
-                trySSEOrPolling();
-            });
-
-            socket.on('sensor_update', (allPumpsData) => {
-                onSensorDataReceived(allPumpsData);
-            });
-
-        } catch (err) {
-            console.warn('WebSocket init failed, switching to SSE/Polling:', err);
-            trySSEOrPolling();
-        }
+        trySSEOrPolling();
     }
 
     function trySSEOrPolling() {

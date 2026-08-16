@@ -10,14 +10,6 @@ from collections import defaultdict
 from dotenv import load_dotenv
 import secrets
 from sensor_engine import sensor_engine
-
-try:
-    from flask_socketio import SocketIO
-    HAS_SOCKETIO = True
-except ImportError:
-    HAS_SOCKETIO = False
-    SocketIO = None
-
 # Load environment variables on startup
 load_dotenv()
 
@@ -36,27 +28,6 @@ from ot_security import ot_monitor
 import supabase_client
 
 app = Flask(__name__)
-
-if HAS_SOCKETIO:
-    socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
-    
-    def background_sensor_emitter():
-        logger.info("📡 Starting WebSocket sensor emitter background thread...")
-        while True:
-            try:
-                data = sensor_engine.tick()
-                socketio.emit("sensor_update", data)
-            except Exception as e:
-                logger.error(f"Error in sensor emission tick: {e}")
-            time.sleep(1.0)
-            
-    emitter_thread = threading.Thread(target=background_sensor_emitter, daemon=True)
-    emitter_thread.start()
-else:
-    socketio = None
-    logger.warning("Flask-SocketIO is not installed. WebSocket live streaming disabled.")
-
-
 # Configure serializer for timed cryptographically-signed tokens
 SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
 if not SECRET_KEY:
@@ -1428,9 +1399,5 @@ def chat():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
-    if HAS_SOCKETIO and socketio:
-        logger.info(f"🚀 Starting Flask-SocketIO server on port {port}...")
-        socketio.run(app, host="0.0.0.0", port=port, debug=debug_mode, allow_unsafe_werkzeug=True)
-    else:
-        logger.info(f"🚀 Starting Standard Flask server on port {port}...")
-        app.run(host="0.0.0.0", port=port, debug=debug_mode)
+    logger.info(f"🚀 Starting Standard Flask server on port {port}...")
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
