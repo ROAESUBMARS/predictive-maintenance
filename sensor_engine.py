@@ -5,7 +5,7 @@ import time
 class SensorEngine:
     def __init__(self):
         self.tick_count = 0
-        # Baselines for 12 Pumps
+        # Baselines for 12 Pumps - All start nominal green
         self.pumps = {
             f"HP-{i:02d}": {
                 "temp": 74.0 + random.uniform(-3, 3),
@@ -16,18 +16,12 @@ class SensorEngine:
                 "rpm": 1500.0 + random.uniform(-10, 10),
                 "leak": 0,
                 "status": "green",
-                "fault": "Normal"
+                "fault": "Normal",
+                "persistence_count": 0,
+                "candidate_status": "green",
+                "candidate_fault": "Normal"
             } for i in range(1, 13)
         }
-        
-        # Inject known baseline state for HP-01 & HP-03 for initial realism
-        self.pumps["HP-01"]["status"] = "red"
-        self.pumps["HP-01"]["fault"] = "Overheating Detected"
-        self.pumps["HP-01"]["temp"] = 94.5
-        
-        self.pumps["HP-03"]["status"] = "yellow"
-        self.pumps["HP-03"]["fault"] = "High Vibration"
-        self.pumps["HP-03"]["vib"] = 0.043
 
     def tick(self):
         self.tick_count += 1
@@ -43,21 +37,42 @@ class SensorEngine:
             oil_val  = p["oil"]  + math.sin(t * 0.5) * 0.3 + random.uniform(-0.1, 0.1)
             rpm_val  = p["rpm"]  + math.sin(t * 0.6) * 8.0 + random.uniform(-3.0, 3.0)
 
-            # Determine fault status dynamically based on threshold
-            status = "green"
-            fault = "Normal"
+            # Determine candidate fault status for current tick
+            cand_status = "green"
+            cand_fault = "Normal"
             if temp_val > 90.0:
-                status = "red"
-                fault = "Overheating Detected"
+                cand_status = "red"
+                cand_fault = "Overheating Detected"
             elif vib_val > 0.038:
-                status = "yellow" if vib_val < 0.050 else "red"
-                fault = "High Vibration"
+                cand_status = "yellow" if vib_val < 0.050 else "red"
+                cand_fault = "High Vibration"
             elif pres_val < 75.0:
-                status = "red"
-                fault = "Pressure Failure"
+                cand_status = "red"
+                cand_fault = "Pressure Failure"
             elif oil_val < 30.0:
-                status = "yellow"
-                fault = "Low Oil Level"
+                cand_status = "yellow"
+                cand_fault = "Low Oil Level"
+
+            # Require 5 consecutive ticks of elevated readings before confirming fault state (persistence window)
+            if cand_status != "green":
+                if p["candidate_status"] == cand_status:
+                    p["persistence_count"] += 1
+                else:
+                    p["candidate_status"] = cand_status
+                    p["candidate_fault"] = cand_fault
+                    p["persistence_count"] = 1
+
+                # Confirm fault only after sustained 5 consecutive ticks (5 seconds)
+                if p["persistence_count"] >= 5:
+                    p["status"] = cand_status
+                    p["fault"] = cand_fault
+            else:
+                # Sensor values within normal range: decay persistence or reset to green
+                p["persistence_count"] = 0
+                p["candidate_status"] = "green"
+                p["candidate_fault"] = "Normal"
+                p["status"] = "green"
+                p["fault"] = "Normal"
 
             updated_readings[pump_id] = {
                 "pump_id": pump_id,
@@ -68,8 +83,8 @@ class SensorEngine:
                 "oil": round(oil_val, 0),
                 "rpm": round(rpm_val, 0),
                 "leak": p["leak"],
-                "status": status,
-                "fault": fault,
+                "status": p["status"],
+                "fault": p["fault"],
                 "timestamp": int(time.time() * 1000)
             }
 

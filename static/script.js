@@ -1499,28 +1499,42 @@ function simulateLiveTelemetry() {
 
     telemetryTickCounter++;
     const tick = telemetryTickCounter * 0.45;
-    const cyclePos = telemetryTickCounter % 16;
+    // 90-second cycle spacing: 60s nominal operation, then gradual 16s anomaly surge
+    const cyclePos = telemetryTickCounter % 90;
 
-    // Check if live periodic fault injection is active (ticks 10 to 14 of 16-second cycle)
+    // Check if live periodic fault injection is active (ticks 60 to 76 of 90-second cycle)
     const presetSelect = document.getElementById('preset-select');
     const isUserCustomPreset = presetSelect && presetSelect.value !== 'normal' && presetSelect.value !== 'nominal';
 
     if (!isUserCustomPreset) {
-        if (cyclePos >= 10 && cyclePos <= 14) {
+        if (cyclePos >= 60 && cyclePos <= 76) {
             const activeFault = LIVE_FAULT_TYPES[liveFaultCycleIndex % LIVE_FAULT_TYPES.length];
-            setSliderValue('temp', activeFault.temp);
-            setSliderValue('pres', activeFault.pres);
-            setSliderValue('vib', activeFault.vib);
-            setSliderValue('flow', activeFault.flow);
-            setSliderValue('oil', activeFault.oil);
-            setSliderValue('rpm', activeFault.rpm);
-            document.getElementById('leak-select').value = activeFault.leak;
+            
+            // Gradual 6-second ramp-up to target fault levels to simulate realistic thermal/mechanical buildup
+            const rampProgress = Math.min(1.0, (cyclePos - 60) / 6.0);
+            const rampedTemp = 70 + (activeFault.temp - 70) * rampProgress;
+            const rampedPres = 100 + (activeFault.pres - 100) * rampProgress;
+            const rampedVib  = 0.020 + (activeFault.vib - 0.020) * rampProgress;
+            const rampedFlow = 300 + (activeFault.flow - 300) * rampProgress;
+            const rampedOil  = 60 + (activeFault.oil - 60) * rampProgress;
+            const rampedRpm  = 1500 + (activeFault.rpm - 1500) * rampProgress;
 
-            if (cyclePos === 10 && !isFaultSurgeActive) {
-                isFaultSurgeActive = true;
-                showToast(activeFault.toast, 'warning', 3500);
+            setSliderValue('temp', rampedTemp);
+            setSliderValue('pres', rampedPres);
+            setSliderValue('vib', rampedVib);
+            setSliderValue('flow', rampedFlow);
+            setSliderValue('oil', rampedOil);
+            setSliderValue('rpm', rampedRpm);
+            if (rampProgress >= 0.8) {
+                document.getElementById('leak-select').value = activeFault.leak;
             }
-        } else if (cyclePos === 15 && isFaultSurgeActive) {
+
+            // Only trigger alert toast after sustained elevated anomaly (6 seconds into the surge)
+            if (cyclePos === 66 && !isFaultSurgeActive) {
+                isFaultSurgeActive = true;
+                showToast(activeFault.toast, 'warning', 4000);
+            }
+        } else if (cyclePos === 77 && isFaultSurgeActive) {
             // End surge, return to nominal baseline
             isFaultSurgeActive = false;
             liveFaultCycleIndex++;
@@ -1574,8 +1588,8 @@ function simulateLiveTelemetry() {
         update3DModelTelemetry(tempVal, vibVal, baseVib > 0.04 || baseTemp > 88 ? 1 : 0);
     }
 
-    // Evaluate diagnostic analysis every 2 seconds (2 ticks) to reflect live telemetry faults immediately
-    if (telemetryTickCounter - lastDiagnosticTick >= 2) {
+    // Evaluate background diagnostic analysis every 8 seconds to allow persistence window confirmation
+    if (telemetryTickCounter - lastDiagnosticTick >= 8) {
         lastDiagnosticTick = telemetryTickCounter;
         runDiagnostic(true); // background silent diagnostic evaluation
     }
