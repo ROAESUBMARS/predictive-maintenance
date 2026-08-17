@@ -105,9 +105,17 @@
         }
     }
 
-    function onSensorDataReceived(allPumpsData) {
+    function onSensorDataReceived(payload) {
+        if (!payload) return;
+        const allPumpsData = payload.pumps || payload;
+        const workOrders = payload.work_orders;
+
+        if (workOrders && typeof window.syncWorkOrdersFromPayload === 'function') {
+            window.syncWorkOrdersFromPayload(workOrders);
+        }
+
         // Sync PUMPS array for Fleet Map & cards
-        if (window.PUMPS && Array.isArray(window.PUMPS)) {
+        if (window.PUMPS && Array.isArray(window.PUMPS) && allPumpsData) {
             window.PUMPS.forEach(p => {
                 const live = allPumpsData[p.id];
                 if (live) {

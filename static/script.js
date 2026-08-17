@@ -227,44 +227,69 @@ function enterApp(role) {
     fetchWorkOrdersFromBackend();
 }
 
+function syncWorkOrdersFromPayload(backendWorkOrders) {
+    if (!Array.isArray(backendWorkOrders)) return;
+    const backendMapped = backendWorkOrders.map(w => ({
+        id: w.wo_number || w.id,
+        wo_number: w.wo_number || w.id,
+        fault: w.fault_name || w.fault,
+        assignee: w.assignee || 'Tech: Sarah Jenkins',
+        priority: w.priority || 'Medium',
+        status: w.status || 'New',
+        time: w.time_logged || w.time || 'Not started',
+        unlocked: w.unlocked || false,
+        diagnosis: w.diagnosis || {}
+    }));
+
+    let hasChanges = false;
+    const orderMap = new Map();
+    backendMapped.forEach(bo => orderMap.set(bo.id, bo));
+    workOrders.forEach(lo => {
+        const existing = orderMap.get(lo.id);
+        if (!existing) {
+            orderMap.set(lo.id, lo);
+            hasChanges = true;
+        } else {
+            // Keep local unlocked state if active, but update status if changed remotely
+            const mergedStatus = lo.unlocked ? (existing.status !== 'Completed' ? lo.status : 'Completed') : existing.status;
+            if (existing.status !== lo.status || existing.unlocked !== lo.unlocked) {
+                hasChanges = true;
+            }
+            orderMap.set(lo.id, { ...existing, unlocked: lo.unlocked || existing.unlocked, status: mergedStatus });
+        }
+    });
+
+    if (backendMapped.length !== workOrders.length) hasChanges = true;
+
+    workOrders = Array.from(orderMap.values());
+    if (hasChanges) {
+        renderEngineerWorkOrdersTable();
+        renderTechWorkOrders();
+    }
+}
+
+window.syncWorkOrdersFromPayload = syncWorkOrdersFromPayload;
+
 async function fetchWorkOrdersFromBackend() {
     try {
         const response = await authFetch(getApiUrl('/api/work-orders'));
         if (response.ok) {
             const data = await response.json();
-            if (data.work_orders && data.work_orders.length > 0) {
-                const backendOrders = data.work_orders.map(w => ({
-                    id: w.wo_number || w.id,
-                    wo_number: w.wo_number || w.id,
-                    fault: w.fault_name || w.fault,
-                    assignee: w.assignee || 'Tech: Sarah Jenkins',
-                    priority: w.priority || 'Medium',
-                    status: w.status || 'New',
-                    time: w.time_logged || w.time || 'Not started',
-                    unlocked: w.unlocked || false,
-                    diagnosis: w.diagnosis || {}
-                }));
-
-                const orderMap = new Map();
-                backendOrders.forEach(bo => orderMap.set(bo.id, bo));
-                workOrders.forEach(lo => {
-                    const existing = orderMap.get(lo.id);
-                    if (!existing) {
-                        orderMap.set(lo.id, lo);
-                    } else {
-                        orderMap.set(lo.id, { ...existing, ...lo });
-                    }
-                });
-
-                workOrders = Array.from(orderMap.values());
-                renderEngineerWorkOrdersTable();
-                renderTechWorkOrders();
+            if (data.work_orders && Array.isArray(data.work_orders)) {
+                syncWorkOrdersFromPayload(data.work_orders);
             }
         }
     } catch (err) {
         console.error("Failed to fetch work orders from backend:", err);
     }
 }
+
+// Continuous 2.5-second cross-device state background polling
+setInterval(() => {
+    if (currentRole) {
+        fetchWorkOrdersFromBackend();
+    }
+}, 2500);
 
 function logout() {
     // Clear intervals

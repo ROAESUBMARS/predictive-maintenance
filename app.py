@@ -217,10 +217,12 @@ def home():
 @app.route("/api/telemetry/live", methods=["GET"])
 def get_live_telemetry():
     data = sensor_engine.tick()
+    orders = supabase_client.get_work_orders() if supabase_client.is_enabled() else WORK_ORDERS_STORE
     return jsonify({
         "status": "success",
         "timestamp": int(time.time() * 1000),
-        "pumps": data
+        "pumps": data,
+        "work_orders": orders
     })
 
 @app.route("/api/telemetry/stream", methods=["GET"])
@@ -229,7 +231,13 @@ def stream_live_telemetry():
         import json
         while True:
             data = sensor_engine.tick()
-            yield f"data: {json.dumps(data)}\n\n"
+            orders = supabase_client.get_work_orders() if supabase_client.is_enabled() else WORK_ORDERS_STORE
+            payload = {
+                "pumps": data,
+                "work_orders": orders,
+                "timestamp": int(time.time() * 1000)
+            }
+            yield f"data: {json.dumps(payload)}\n\n"
             time.sleep(1.0)
     from flask import Response
     return Response(generate(), mimetype="text/event-stream")
