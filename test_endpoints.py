@@ -18,14 +18,14 @@ def clear_rate_limits():
 
 @pytest.fixture
 def tech_token(client):
-    payload = {"email": "sarah@nmu.edu.ng", "password": "admin", "role": "tech"}
+    payload = {"email": "sarah@nmu.edu.ng", "password": "admin123", "role": "tech"}
     response = client.post("/api/login", json=payload)
     assert response.status_code == 200
     return response.json["token"]
 
 @pytest.fixture
 def eng_token(client):
-    payload = {"email": "eng@nmu.edu.ng", "password": "admin", "role": "eng"}
+    payload = {"email": "eng@nmu.edu.ng", "password": "admin123", "role": "eng"}
     response = client.post("/api/login", json=payload)
     assert response.status_code == 200
     return response.json["token"]
@@ -138,19 +138,19 @@ def test_unauthorized_access(client):
 
 def test_login_flow(client):
     # 1. Successful login
-    payload = {"email": "sarah@nmu.edu.ng", "password": "admin", "role": "tech"}
+    payload = {"email": "sarah@nmu.edu.ng", "password": "admin123", "role": "tech"}
     response = client.post("/api/login", json=payload)
     assert response.status_code == 200
     data = response.json
     assert "token" in data
     
     # 2. Mismatched role login
-    payload = {"email": "sarah@nmu.edu.ng", "password": "admin", "role": "eng"}
+    payload = {"email": "sarah@nmu.edu.ng", "password": "admin123", "role": "eng"}
     response = client.post("/api/login", json=payload)
     assert response.status_code == 403
     
     # 3. Invalid email login
-    payload = {"email": "unknown@nmu.edu.ng", "password": "admin", "role": "tech"}
+    payload = {"email": "unknown@nmu.edu.ng", "password": "admin123", "role": "tech"}
     response = client.post("/api/login", json=payload)
     assert response.status_code == 401
 
@@ -159,25 +159,25 @@ def test_login_flow(client):
     response = client.post("/api/login", json=payload)
     assert response.status_code == 401
 
-    # 5. Rejection of admin123
-    payload = {"email": "tech@nmu.edu.ng", "password": "admin123", "role": "tech"}
+    # 5. Invalid password rejected
+    payload = {"email": "tech@nmu.edu.ng", "password": "wrongpassword123", "role": "tech"}
     response = client.post("/api/login", json=payload)
     assert response.status_code == 401
 
-    # 6. Verify all 3 interfaces authenticate successfully with password "admin"
+    # 6. Verify all 3 interfaces authenticate successfully with password "admin123"
     for email, role in [("tech@nmu.edu.ng", "tech"), ("eng@nmu.edu.ng", "eng"), ("rel@nmu.edu.ng", "rel")]:
-        resp = client.post("/api/login", json={"email": email, "password": "admin", "role": role})
+        resp = client.post("/api/login", json={"email": email, "password": "admin123", "role": role})
         assert resp.status_code == 200, f"Failed for role {role}"
         assert "token" in resp.json
 
-    # 7. Admin account can authenticate across all 3 interfaces with password "admin"
+    # 7. Admin account can authenticate across all 3 interfaces with password "admin123"
     for role in ["tech", "eng", "rel"]:
-        resp = client.post("/api/login", json={"email": "admin@nmu.edu.ng", "password": "admin", "role": role})
+        resp = client.post("/api/login", json={"email": "admin@nmu.edu.ng", "password": "admin123", "role": role})
         assert resp.status_code == 200, f"Superuser failed for role {role}"
 
 def test_rbac_config(client, tech_token):
     # 1. Login as Engineer
-    payload = {"email": "eng@nmu.edu.ng", "password": "admin", "role": "eng"}
+    payload = {"email": "eng@nmu.edu.ng", "password": "admin123", "role": "eng"}
     response = client.post("/api/login", json=payload)
     assert response.status_code == 200
     eng_token = response.json["token"]

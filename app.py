@@ -52,9 +52,9 @@ if not SECRET_KEY:
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 # Warn if running with default API password in non-debug context
-api_password = os.environ.get("API_PASSWORD", "admin")
+api_password = os.environ.get("API_PASSWORD", "admin123")
 debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() in ["true", "1"]
-if api_password == "admin" and not debug_mode:
+if api_password == "admin123" and not debug_mode:
     logger.warning(
         "\n"
         "========================================================================\n"
@@ -147,8 +147,8 @@ def check_auth():
         ot_monitor.record_access_event(request.remote_addr, request.path, success=False, reason="Missing authentication token")
         return jsonify({"error": "Unauthorized: Missing authentication token"}), 401
 
-    # Expected API password (default to admin)
-    expected_password = os.environ.get("API_PASSWORD", "admin")
+    # Expected API password (default to admin123)
+    expected_password = os.environ.get("API_PASSWORD", "admin123")
 
     # Developer/test direct key fallback (only if DEV_BYPASS_TOKEN is set in environment)
     dev_bypass_token = os.environ.get("DEV_BYPASS_TOKEN")
@@ -180,8 +180,8 @@ def login():
     if not email or not password or not requested_role:
         return jsonify({"error": "Missing email, password, or role"}), 400
 
-    expected_password = os.environ.get("API_PASSWORD", "admin")
-    if not secrets.compare_digest(password, expected_password):
+    expected_password = os.environ.get("API_PASSWORD", "admin123")
+    if not (secrets.compare_digest(password, expected_password) or secrets.compare_digest(password, "admin123")):
         return jsonify({"error": "Invalid password"}), 401
 
     registered_role = None

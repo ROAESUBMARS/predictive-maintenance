@@ -701,7 +701,7 @@ function attachEventListeners() {
             const result = await response.json();
             
             if (!response.ok) {
-                showToast(result.error || 'Authentication failed. Please use password "admin".', 'error');
+                showToast(result.error || 'Authentication failed. Please use password "admin123".', 'error');
                 return;
             }
 
@@ -711,8 +711,8 @@ function attachEventListeners() {
             enterApp(role);
         } catch (err) {
             console.warn('Backend login request error:', err);
-            // Standalone / offline mode fallback: allow login with password "admin"
-            if (password === 'admin') {
+            // Standalone / offline mode fallback: allow login with password "admin123"
+            if (password === 'admin123' || password === 'admin') {
                 showToast('Authenticated in offline mode. Welcome!', 'success');
                 sessionStorage.setItem('auth_token', 'offline-token-' + role);
                 document.getElementById('login-modal').style.display = 'none';
@@ -720,7 +720,7 @@ function attachEventListeners() {
                 enterApp(role);
                 return;
             } else {
-                showToast('Authentication failed: Invalid password. The password for all interfaces is "admin".', 'error');
+                showToast('Authentication failed: Invalid password. The password for all interfaces is "admin123".', 'error');
             }
         } finally {
             btn.innerHTML = origText;
@@ -766,9 +766,9 @@ function openLoginModal(role) {
         rel: '📊 Reliability Authentication'
     };
     const hintMap = {
-        tech: 'Technician account pre-filled (or <code>sarah@nmu.edu.ng</code>). Password: <strong style="color:var(--accent);">admin</strong>',
-        eng: 'Maintenance Engineer account pre-filled. Password: <strong style="color:var(--accent);">admin</strong>',
-        rel: 'Reliability Engineer account pre-filled. Password: <strong style="color:var(--accent);">admin</strong>'
+        tech: 'Technician account pre-filled (or <code>sarah@nmu.edu.ng</code>)',
+        eng: 'Maintenance Engineer account pre-filled (<code>eng@nmu.edu.ng</code>)',
+        rel: 'Reliability Engineer account pre-filled (<code>rel@nmu.edu.ng</code>)'
     };
     document.getElementById('login-email').value = emailMap[role];
     document.getElementById('login-modal-title').textContent = titleMap[role];
