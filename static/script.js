@@ -701,7 +701,7 @@ function attachEventListeners() {
             const result = await response.json();
             
             if (!response.ok) {
-                showToast(result.error || 'Authentication failed.', 'error');
+                showToast(result.error || 'Authentication failed. Please use password "admin".', 'error');
                 return;
             }
 
@@ -710,8 +710,18 @@ function attachEventListeners() {
             document.getElementById('login-password').value = '';
             enterApp(role);
         } catch (err) {
-            console.error(err);
-            showToast('Error communicating with authentication server.', 'error');
+            console.warn('Backend login request error:', err);
+            // Standalone / offline mode fallback: allow login with password "admin"
+            if (password === 'admin') {
+                showToast('Authenticated in offline mode. Welcome!', 'success');
+                sessionStorage.setItem('auth_token', 'offline-token-' + role);
+                document.getElementById('login-modal').style.display = 'none';
+                document.getElementById('login-password').value = '';
+                enterApp(role);
+                return;
+            } else {
+                showToast('Authentication failed: Invalid password. The password for all interfaces is "admin".', 'error');
+            }
         } finally {
             btn.innerHTML = origText;
         }
@@ -755,8 +765,17 @@ function openLoginModal(role) {
         eng: '⚙️ Engineer Authentication',
         rel: '📊 Reliability Authentication'
     };
+    const hintMap = {
+        tech: 'Technician account pre-filled (or <code>sarah@nmu.edu.ng</code>). Password: <strong style="color:var(--accent);">admin</strong>',
+        eng: 'Maintenance Engineer account pre-filled. Password: <strong style="color:var(--accent);">admin</strong>',
+        rel: 'Reliability Engineer account pre-filled. Password: <strong style="color:var(--accent);">admin</strong>'
+    };
     document.getElementById('login-email').value = emailMap[role];
     document.getElementById('login-modal-title').textContent = titleMap[role];
+    const hintEl = document.getElementById('login-modal-hint');
+    if (hintEl && hintMap[role]) {
+        hintEl.innerHTML = hintMap[role];
+    }
     document.getElementById('login-modal').style.display = 'flex';
     document.getElementById('login-password').focus();
 }

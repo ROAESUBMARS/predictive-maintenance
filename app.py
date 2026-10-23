@@ -70,8 +70,12 @@ USER_DATABASE = {
     "mike@nmu.edu.ng": "tech",
     "david@nmu.edu.ng": "tech",
     "tech@nmu.edu.ng": "tech",
+    "technician@nmu.edu.ng": "tech",
     "eng@nmu.edu.ng": "eng",
+    "engineer@nmu.edu.ng": "eng",
     "rel@nmu.edu.ng": "rel",
+    "reliability@nmu.edu.ng": "rel",
+    "admin@nmu.edu.ng": "eng",
 }
 
 # Configure CORS to restrict allowed origins (defaults to local development urls)
@@ -193,6 +197,10 @@ def login():
         if email not in USER_DATABASE:
             return jsonify({"error": "User email not authorized"}), 401
         registered_role = USER_DATABASE[email]
+
+    # Superuser admin@nmu.edu.ng can access any requested role
+    if email == "admin@nmu.edu.ng":
+        registered_role = requested_role
 
     if registered_role != requested_role:
         return jsonify({"error": f"Role mismatch. Registered as {registered_role}"}), 403
