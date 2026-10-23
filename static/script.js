@@ -223,6 +223,14 @@ function enterApp(role) {
         // Delay chart instantiation to guarantee DOM rendering
         setTimeout(initReliabilityCharts, 100);
     }
+
+    // Sync alert recipient email with logged-in user email
+    const loginEmail = document.getElementById('login-email') ? document.getElementById('login-email').value.trim() : '';
+    const alertEmailInput = document.getElementById('alert-email-input');
+    if (alertEmailInput && loginEmail) {
+        alertEmailInput.value = loginEmail;
+    }
+
     // Sync work orders from Supabase / API backend
     fetchWorkOrdersFromBackend();
 }
@@ -1062,11 +1070,13 @@ function updateRawDataTable() {
 async function runDiagnostic(silent = false) {
     const data = getSensorData();
     
-    // Add alert recipient configurations from UI
+    // Add alert recipient configurations from UI if specified
     const emailInput = document.getElementById('alert-email-input');
     const phoneInput = document.getElementById('alert-phone-input');
-    if (emailInput) data.alert_email = emailInput.value.trim();
-    if (phoneInput) data.alert_phone = phoneInput.value.trim();
+    const emailVal = emailInput ? emailInput.value.trim() : '';
+    const phoneVal = phoneInput ? phoneInput.value.trim() : '';
+    if (emailVal) data.alert_email = emailVal;
+    if (phoneVal) data.alert_phone = phoneVal;
 
     const btn = document.getElementById('run-diagnostic-btn');
     if (!silent) {
@@ -1088,8 +1098,8 @@ async function runDiagnostic(silent = false) {
         const result = await response.json();
         
         if (result.error) {
-            console.error(result.error);
-            if (!silent) showToast('Error running diagnostic. Check API connection.', 'error');
+            console.error('Diagnostic error response:', result.error);
+            if (!silent) showToast(result.error, 'error', 6000);
             return;
         }
 
@@ -1128,7 +1138,8 @@ async function runDiagnostic(silent = false) {
         updateChartPoint(data.Vibration_g, data.Flow_Rate_lpm, data.Oil_Level_pct);
 
     } catch (err) {
-        console.error(err);
+        console.error('Diagnostic request exception:', err);
+        if (!silent) showToast('Error communicating with API server. Please check your connection or API Server URL in topbar.', 'error', 5000);
     } finally {
         if (!silent) {
             btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Run Diagnostic';
